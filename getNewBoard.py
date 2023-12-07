@@ -1,4 +1,5 @@
-def getMoves(board,pos,ennemies):
+def getMoves(board,ennemies):
+    #va falloir boucler pos pour explorer tout le board
     case = board[pos[0]][pos[1]]
     piecette = case[0]
     couleur = case[1]
