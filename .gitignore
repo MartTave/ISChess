@@ -1,7 +1,1 @@
-
-__pycache__/ChessArena.cpython-311.pyc
-__pycache__/ChessRules.cpython-311.pyc
-__pycache__/ParallelPlayer.cpython-311.pyc
-Bots/__pycache__/BaseChessBot.cpython-311.pyc
-Bots/__pycache__/ChessBotList.cpython-311.pyc
-Bots/__pycache__/__init__.cpython-311.pyc
+**/__pycache__/**
