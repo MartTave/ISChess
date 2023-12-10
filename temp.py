@@ -45,9 +45,6 @@ def checkCell(board: Board, startX:int, startY:int, endX:int, endY:int, allies:l
 
 def getMovesRook(board:Board, x:int, y:int, player:str, allies: list[str], enemies: list[str]):
     data = board.boardTab
-    allAllies = allies.copy()
-    allAllies.append(player)
-    print("All allies is ", allAllies)
     # TODO:This part is for debug -> when final, thoses checks needs to be done upward
     if not isInBoard(board, x, y):
         print("[ERROR] Get moves from rook : index non valid (",x , ", ", y, ")")
@@ -55,29 +52,80 @@ def getMovesRook(board:Board, x:int, y:int, player:str, allies: list[str], enemi
     # If we're here -> position passed in parameter is in board
     if data[x][y][1] != player[0]:
         print("[ERROR] Get moves from rook : cell is not from player : ", data[x][y], " and ", player)
-    
+    allAllies = allies.copy()
+    allAllies.append(player)
+    print("All allies is ", allAllies)
     # Now we can check for moves
     res = []
     # We need to check for four directions
     for i in range(x + 1, len(data)):
-        added = checkCell(board, x, y, i, y, allAllies, enemies, res)
-        if not added:
+        if not checkCell(board, x, y, i, y, allAllies, enemies, res):
             break
     for i in range(x - 1, 0):
-        added = checkCell(board, x, y, i, y, allAllies, enemies, res)
-        if not added:
+        if not checkCell(board, x, y, i, y, allAllies, enemies, res):
             break
     for i in range(y + 1, len(data[0])):
-        added = checkCell(board, x, y, x, i, allAllies, enemies, res)
-        if not added:
+        if not checkCell(board, x, y, x, i, allAllies, enemies, res):
             break
     for i in range(y - 1, 0):
-        added = checkCell(board, x, y, x, i, allAllies, enemies, res)
-        if not added:
+        if not checkCell(board, x, y, x, i, allAllies, enemies, res):
             break
+    return res
+
+def getMaladeMoves(board: Board, x:int, y:int, player:str, allies: list[str], enemies: list[str]):
+    data = board.boardTab
+    # TODO:This part is for debug -> when final, thoses checks needs to be done upward
+    if not isInBoard(board, x, y):
+        print("[ERROR] Get moves from rook : index non valid (",x , ", ", y, ")")
+        return []
+    # If we're here -> position passed in parameter is in board
+    if data[x][y][1] != player[0]:
+        print("[ERROR] Get moves from rook : cell is not from player : ", data[x][y], " and ", player) 
+        return []   
+    allAllies = allies.copy()
+    allAllies.append(player)
+    print("All allies is ", allAllies)
+
+
+    res = []
+    # Direction bottom right
+    currentX = x + 1
+    currentY = y + 1
+    while True:
+        if not checkCell(board, x, y, currentX, currentY, allAllies, enemies, res):
+            break
+        currentX += 1
+        currentY += 1
+
+    # Direction bottom left
+    currentX = x - 1
+    currentY = y + 1
+    while True:
+        if not checkCell(board, x, y, currentX, currentY, allAllies, enemies, res):
+            break
+        currentX -= 1
+        currentY += 1
+    
+    # Direction top left
+    currentX = x - 1
+    currentY = y - 1
+    while True:
+        if not checkCell(board, x, y, currentX, currentY, allAllies, enemies, res):
+            break
+        currentX -= 1
+        currentY -= 1
+
+    # Direction top right
+    currentX = x + 1
+    currentY = y - 1
+    while True:
+        if not checkCell(board, x, y, currentX, currentY, allAllies, enemies, res):
+            break
+        currentX += 1
+        currentY -= 1
     return res
 
 baseBoard = parseBoard("./Data/maps/default.brd")
 
-res = getMovesRook(baseBoard, 0, 0, "w", [], ["b"])
+res = getMaladeMoves(baseBoard, 0, 2, "w", [], ["b"])
 print(len(res))
