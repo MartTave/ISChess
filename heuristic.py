@@ -1,5 +1,5 @@
 from tools.readJson import readJson
-import Board
+from Board import Board
 
 heurists_settings_path = "./settings/heuristic.json"
 
@@ -13,7 +13,7 @@ def parseBoard(path:str)-> Board:
     for l in lines:
         l = l.replace("\n", "")
         data.append(l.split(","))
-    return data
+    return Board(data, "")
 
 class Heuristic:
     settings = readJson(heurists_settings_path)
@@ -37,6 +37,6 @@ class Heuristic:
         return points * Heuristic.settings["pieces"]["factor"]
 
 
-baseBoard = Board.Board(parseBoard("./Data/maps/default.brd"))
+baseBoard = parseBoard("./Data/maps/default.brd")
 val = Heuristic.getValue(baseBoard, "w")
 print(val)
