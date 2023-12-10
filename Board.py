@@ -10,6 +10,14 @@ class Board:
         self.teams = wrap(teams, 3) #fait des groupes de 3 characteres avec le string d'equipes
         self.nextBoards:list[Board] = []
 
+    def boardToString(self):
+        print("Board:")
+        for i in self.boardTab:
+            print("\n")
+            for j in i:
+                print("{}, ".format(j))
+        print("\b\n end.\n")
+
     def getValue(self):
         puntos = 0
         for x in self.boardTab:
@@ -21,13 +29,13 @@ class Board:
     def playerRotate(self, playerTab):
         #fonction rapide pour passer d'un joueur a l'autre => [1,2,3,4] devient [2,3,4,1]
         outTab = []
-        for i in range(1,len(playerTab),step=1):
+        for i in range(1,len(playerTab)):
             outTab.append(playerTab[i])
         outTab.append(playerTab[0])
         return outTab
     
     def getBestMove(self,threshold,players):
-        self.nextBoards = getNewBoard.getMoves(self,players[0])
+        self.nextBoards = getNewBoard.getMoves(self,players)
         
         #on sait pas si on range, faut voir
         maxValue = 0
