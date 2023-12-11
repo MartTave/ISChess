@@ -12,9 +12,10 @@ from PyQt6 import QtCore
 #   Be careful with modules to import from the root (don't forget the Bots.)
 from Bots.ChessBotList import register_chess_bot
 
+print("This bot is definitly working")
+
 #   Simply move the pawns forward and tries to capture as soon as possible
 def chess_bot(player_sequence, board, time_budget, **kwargs):
-
     color = player_sequence[1]
     for x in range(board.shape[0]-1):
         for y in range(board.shape[1]):

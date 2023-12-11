@@ -7,6 +7,7 @@ from Bots.ChessBotList import *
 from ChessRules import *
 from ParallelPlayer import *
 from Bots import *
+import Bot
 
 import numpy as np
 
