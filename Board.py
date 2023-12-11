@@ -1,3 +1,4 @@
+from random import randrange
 from Player import Player
 import copy
 
@@ -25,8 +26,7 @@ class Board:
 
     def getValue(self)-> float:
         # Valuing the board with the player that played to get to this board
-        self.value = Heuristic.getValue(self, self.playerOrder[-1], self.settings)
-        return self.value
+        return Heuristic.getValue(self, self.player, self.settings)
 
     def getTeams(self, player: Player) -> tuple[list[Player], list[Player]]:
         allies = [player]
@@ -78,7 +78,7 @@ class Board:
                 b.board.fillPossibleBoards(threshold, depth - 1) #on inverse les valeurs pour par réécrire la ligne
             else:
                 # si c'est un move de merde
-                self.nextMoves.pop(b)
+                self.nextMoves.pop(self.nextMoves.index(b))
 
 class Move:
     def __init__(self, board:Board, move: tuple[tuple[int, int], tuple[int, int]]):
@@ -345,7 +345,7 @@ def getQueenMoves(board: Board, x: int, y: int, player:Player, allies:list[Playe
     return part1 + part2
 
 def getAllMoves(board: Board, player: Player, allies: list[Player], enemies: list[Player])->list[Move]:
-    res = []
+    res: list[Move] = []
     for y in range(0, len(board.boardTab)):
         for x in range(0, len(board.boardTab[y])):
             current = board.boardTab[y][x]
@@ -362,7 +362,8 @@ def getAllMoves(board: Board, player: Player, allies: list[Player], enemies: lis
                     case 'n':
                         res += getChevalMoves(board, x, y, player, allies, enemies)
                     case 'p':
-                        res += getMovesPiong(board, x, y, player, allies, enemies)
+                        moves = getMovesPiong(board, x, y, player, allies, enemies)
+                        res += moves
                     case 'k':
                         res += getRoahMoves(board, x, y, player, allies, enemies)
     return res
@@ -403,8 +404,8 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
     # Here the values of the child must be updated -> we can choose the greater one
     if len(rootBoard.nextMoves) == 0:
         return
-    maxMove = rootBoard.nextMoves[0]
-    max = rootBoard.nextMoves[0].board.value
+    maxMove = rootBoard.nextMoves[randrange(0, len(rootBoard.nextMoves))]
+    max = maxMove.board.value
     for c in rootBoard.nextMoves:
         if c.board.value > max:
             maxMove = c
