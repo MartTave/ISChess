@@ -26,6 +26,11 @@ class Bot():
                 allies.append(c)
             else:
                 enemies.append(c)
+        while playerOrder[0].orientation != 0:
+             for p in playerOrder:
+                  p.orientation += 1
+                  if p.orientation == 4:
+                       p.orientation = 0
         currentBoard = Board(board, player, allies, enemies, playerOrder, self.settings)
         move = currentBoard.getBestMove(0.8, 2)
         return move
