@@ -9,8 +9,10 @@ from Bots.ChessBotList import register_chess_bot
 class Bot():
 
 
-    def __init__(self, configPath: str) -> None:
+    def __init__(self, configPath: str, depthAllowed=5, needRotating=True) -> None:
             self.settings = readJson(configPath)
+            self.needRotating = needRotating
+            self.depthAllowed = depthAllowed
 
     def play(self, player_sequence: str, board: list[list[str]], time_budget):
         teams = wrap(player_sequence, 3)
@@ -26,16 +28,17 @@ class Bot():
                 allies.append(c)
             else:
                 enemies.append(c)
-        while playerOrder[0].orientation != 0:
-             for p in playerOrder:
-                  p.orientation += 1
-                  if p.orientation == 4:
-                       p.orientation = 0
+        if self.needRotating:
+            while playerOrder[0].orientation != 0:
+                for p in playerOrder:
+                    p.orientation += 1
+                    if p.orientation == 4:
+                        p.orientation = 0
         currentBoard = Board(board, player, allies, enemies, playerOrder, self.settings)
-        move = currentBoard.getBestMove(1000, 5)
+        move = currentBoard.getBestMove(1000, self.depthAllowed)
         return move
 
 
-myBot = Bot("./settings/v1.json")
+myBot = Bot("./settings/v1.json", 3)
 
 register_chess_bot("Bot_1", myBot.play)
