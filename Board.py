@@ -3,6 +3,8 @@ from Player import Player
 import copy
 CLACLUL_PARAM = 50
 
+popped = 0
+
 class Board:
     RANGEREOUPAS = True
 
@@ -17,12 +19,16 @@ class Board:
         self.nextMoves:list[Move] = []
 
     def boardToString(self):
-        print("Board:")
+        res = ""
         for i in self.boardTab:
-            print("\n")
+            line = ""
             for j in i:
-                print("{}, ".format(j))
-        print("\b\n end.\n")
+                if j == "":
+                    line += "--,"
+                    continue
+                line += j + ","
+            res += line + "\n"
+        return res
 
     def getValue(self)-> float:
         # Valuing the board with the player that played to get to this board
@@ -55,30 +61,36 @@ class Board:
         if depth == 0:
             return
         self.nextMoves = getAllMoves(self, self.player, self.allies, self.enemies)
+        # Activate only if treshold pruning is deactivated
+        # for m in self.nextMoves:
+        #     m.board.fillPossibleBoards(threshold, depth - 1)
         if len(self.nextMoves) == 0:
             return
         #on sait pas si on range, faut voir
-        maxValue = 0
+        minValue = 10000
         if self.RANGEREOUPAS:
             #si la constante dit qu'on range
             sorted(self.nextMoves, key=lambda x: x.board.value)
-            maxValue = self.nextMoves[0].board.value
+            minValue = self.nextMoves[-1].board.value
         else:
             #si la contante dit qu'on s'en fout
             for i in self.nextMoves:
                 #pour chaque Board enfant
-                if i.value > maxValue:
-                    #on cherche le board avec la plus grande valeur
-                    maxValue = i.board.value
+                if i.value < minValue:
+                   #on cherche le board avec la plus grande valeur
+                   minValue = i.board.value
 
+        currentTresh = minValue + (threshold)
+        global popped
         for b in self.nextMoves:
             #pour chaque Board enfant
-            if b.board.value > maxValue * threshold:
+            if b.board.value < currentTresh:
                 # si c'est un move suffisament interessant
                 b.board.fillPossibleBoards(threshold, depth - 1) #on inverse les valeurs pour par réécrire la ligne
             else:
                 # si c'est un move de merde
                 self.nextMoves.pop(self.nextMoves.index(b))
+                popped += 1
 
 class Move:
     def __init__(self, board:Board, move: tuple[tuple[int, int], tuple[int, int]]):
@@ -202,13 +214,6 @@ def getNextPiongAttack(player: Player, x: int, y: int) -> tuple[tuple[int, int],
             return (topRight, bottomRight)
 
 def getMovesPiong(board: Board, x: int, y: int, player:Player,  allies:list[Player], enemies:list[Player]) -> list[Move]:
-   
-
-    #TODO: Need to remove this check -> should not be here -> debug only
-    if not isInBoard(board, x, y):
-        print("[ERROR] Cell not in board in get moves piong")
-        return
-
     nextIndexes = getNextPiongMoves(player, x, y)
     nextAttacks = getNextPiongAttack(player, x, y)
     res = []
@@ -236,12 +241,7 @@ def getMovesPiong(board: Board, x: int, y: int, player:Player,  allies:list[Play
     return res
 
 def getChevalMoves(board: Board, x: int, y: int, player:Player, allies:list[Player], enemies: list[Player]) -> list[Move]:
-    
-    #TODO: Need to remove this check -> should not be here -> debug only
-    if not isInBoard(board, x, y):
-        print("[ERROR] Cell not in board in get moves piong")
-        return
-    
+
     res = []
     checkCell(board, x, y, x + 1, y + 2, allies, enemies, res)
     checkCell(board, x, y, x - 1, y + 2, allies, enemies, res)
@@ -254,11 +254,6 @@ def getChevalMoves(board: Board, x: int, y: int, player:Player, allies:list[Play
     return res
 
 def getRoahMoves(board: Board, x: int, y: int, player:Player, allies: list[Player], enemies: list[Player]) -> list[Move]:
-    #TODO: Need to remove this check -> should not be here -> debug only
-    if not isInBoard(board, x, y):
-        print("[ERROR] Cell not in board in get moves piong")
-        return
-    
     res = []
     checkCell(board, x, y, x - 1, y - 1, allies, enemies, res)
     checkCell(board, x, y, x, y - 1, allies, enemies, res)
@@ -272,10 +267,6 @@ def getRoahMoves(board: Board, x: int, y: int, player:Player, allies: list[Playe
 
 def getMovesRook(board:Board, x:int, y:int, player:Player, allies: list[Player], enemies: list[Player]):
     data = board.boardTab
-    # TODO:This part is for debug -> when final, thoses checks needs to be done upward
-    if not isInBoard(board, x, y):
-        print("[ERROR] Get moves from rook : index non valid (",x , ", ", y, ")")
-        return []
     # If we're here -> position passed in parameter is in board
     if len(data[y][x]) > 1 and data[y][x][1] != player.color:
         print("[ERROR] Get moves from rook : cell is not from player : ", data[y][x], " and ", player)
@@ -301,10 +292,6 @@ def getMovesRook(board:Board, x:int, y:int, player:Player, allies: list[Player],
 
 def getMaladeMoves(board: Board, x:int, y:int, player:Player, allies: list[Player], enemies: list[Player]) -> list[Move]:
     data = board.boardTab
-    # TODO:This part is for debug -> when final, thoses checks needs to be done upward
-    if not isInBoard(board, x, y):
-        print("[ERROR] Get moves from rook : index non valid (",x , ", ", y, ")")
-        return []
     # If we're here -> position passed in parameter is in board
     if len(data[y][x]) > 1 and data[y][x][1] != player.color:
         print("[ERROR] Get moves from rook : cell is not from player : ", data[y][x], " and ", player) 
@@ -386,25 +373,34 @@ def getMoveFromBoards(source: Board, dest:Board):
                     # This mean we have found the pieces that moved
                     pass
 
-movesFound = 0
+movesFound = -1
+depth = 0
 def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]]:
     global movesFound
-    movesFound = 0
+    movesFound = -1
     def getChildsScore(board:Board) -> float:
-        global movesFound
+        global movesFound, depth
+        depth += 1
         movesFound += 1
         totalBrut = 0
         totalRaf = 0
         childScores = []
         for c in board.nextMoves:
             getChildsScore(c.board)
-            childScores.append(c.board.value)
-            totalBrut += getProba(childScores[-1])
+            newVal = getProba(c.board.value)
+            childScores.append(newVal)
+            totalBrut += newVal
         index = 0
         for c in board.nextMoves:
             totalRaf += childScores[index] * (childScores[index] / totalBrut)
             index += 1
         board.value += totalRaf
+        # TODO: Debug purpose only
+        # print("Board at depth : ", depth)
+        # print("Score is : ", board.value)
+        # print("Player color is : ", board.player.color)
+        # print(board.boardToString())
+        depth -= 1
     getChildsScore(rootBoard)
     # Here the values of the child must be updated -> we can choose the greater one
     if len(rootBoard.nextMoves) == 0:
@@ -413,7 +409,11 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
     min = minMove.board.value
     for c in rootBoard.nextMoves:
         if c.board.value < min:
+            #print("[SYS] Found a better move")
             minMove = c
             min = c.board.value
     print("Found a move in ", movesFound, " total moves")
+    global popped
+    print("Popped ", popped, " moves with treshold")
+    popped = 0
     return minMove.move
