@@ -1,7 +1,7 @@
 from random import randrange
 from Player import Player
 import copy
-
+CLACLUL_PARAM = 50
 
 class Board:
     RANGEREOUPAS = True
@@ -104,7 +104,11 @@ class Heuristic:
                 if value != "" and value != "--" and value[1] == player.color:
                     points += settings["pieces"]["values"][value[0]]
         return points * settings["pieces"]["factor"]
-        
+
+
+
+
+
 def isInBoard(board:Board, x:int, y:int):
     return x >= 0 and x < len(board.boardTab[0]) and y >= 0 and y < len(board.boardTab)
 
@@ -369,7 +373,7 @@ def getAllMoves(board: Board, player: Player, allies: list[Player], enemies: lis
     return res
 
 def getProba(score: float):
-    return pow(score, 2)
+    return CLACLUL_PARAM / (score + 0.1)
 
 def getMoveFromBoards(source: Board, dest:Board):
     player = source.player
@@ -381,6 +385,7 @@ def getMoveFromBoards(source: Board, dest:Board):
                 if current != source.boardTab[i][j]:
                     # This mean we have found the pieces that moved
                     pass
+
 movesFound = 0
 def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]]:
     global movesFound
@@ -404,11 +409,11 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
     # Here the values of the child must be updated -> we can choose the greater one
     if len(rootBoard.nextMoves) == 0:
         return
-    maxMove = rootBoard.nextMoves[randrange(0, len(rootBoard.nextMoves))]
-    max = maxMove.board.value
+    minMove = rootBoard.nextMoves[randrange(0, len(rootBoard.nextMoves))]
+    min = minMove.board.value
     for c in rootBoard.nextMoves:
-        if c.board.value > max:
-            maxMove = c
-            max = c.board.value
+        if c.board.value < min:
+            minMove = c
+            min = c.board.value
     print("Found a move in ", movesFound, " total moves")
-    return maxMove.move
+    return minMove.move

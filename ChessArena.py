@@ -268,7 +268,7 @@ class ChessArena(QtWidgets.QWidget):
         self.chessboardView.fitInView(self.chess_scene.sceneRect())
 
     def start(self):
-        self.board = self.load_board("Data/maps/default.brd")
+        self.board = self.load_board("Data/maps/defaultTest1.brd")
         self.setup_board()
         self.setup_players()
         self.chess_scene.update()

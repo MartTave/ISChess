@@ -27,7 +27,7 @@ class Bot():
             else:
                 enemies.append(c)
         currentBoard = Board(board, player, allies, enemies, playerOrder, self.settings)
-        move = currentBoard.getBestMove(0.8, 3)
+        move = currentBoard.getBestMove(0.8, 2)
         return move
 
 
