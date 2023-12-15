@@ -270,7 +270,6 @@ def getMoves(board,players):
                         except:
                             print("Code N8: Y a eu un soucax, mais c'est surement un move qui sort du tableau alors ca va :D")
                     
-
                     case 'k': #roa
                         try: #utilisation d'un try pour les problemes d'index?
                             if board[i-1][j][1] in authorizedChars:
