@@ -47,7 +47,7 @@ class Party():
 
     def playGame(self, numberOfPlays=-1):
         if numberOfPlays == 0:
-            return
+            return False
         currentP: Bot = self.bots[self.currentPlayerOrder[0][1]]
         start = time.time()
         move = currentP.play(''.join(self.currentPlayerOrder), self.currentData, 10)
@@ -57,15 +57,20 @@ class Party():
         if move == None:
             print("Party seems to be done...")
             print(self.currentPlayerOrder[1][1], " won the game !")
-            return
+            return False
         self.currentData[move[1][0]][move[1][1]] = self.currentData[move[0][0]][move[0][1]]
         self.currentData[move[0][0]][move[0][1]] = ""
         bcup = self.currentPlayerOrder[0]
         self.currentPlayerOrder[0] = self.currentPlayerOrder[1]
         self.currentPlayerOrder[1] = bcup
         self.printCurrentBoard()
-        self.playGame(numberOfPlays - 1)
+        return True
 
 
-current = Party("./Data/maps/defaultTest1.brd", 5)
-current.playGame()
+current = Party("./Data/maps/defaultTest1.brd", 2)
+
+numberOfPlays = 1
+res = True
+while (res):
+    res = current.playGame(numberOfPlays)
+    numberOfPlays -= 1

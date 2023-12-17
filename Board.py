@@ -24,9 +24,10 @@ class Board:
             line = ""
             for j in i:
                 if j == "":
-                    line += "--,"
+                    line += "--"
                     continue
-                line += j + ","
+                if j != i[-1]:
+                    line += ','
             res += line + "\n"
         return res
 

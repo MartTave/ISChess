@@ -39,6 +39,6 @@ class Bot():
         return move
 
 
-myBot = Bot("./settings/v1.json", 3)
+myBot = Bot("./settings/v1.json", 4)
 
 register_chess_bot("Bot_1", myBot.play)
