@@ -7,6 +7,7 @@ CLACLUL_PARAM = 50
 
 popped = 0
 
+
 class Board:
     RANGEREOUPAS = True
 
@@ -68,10 +69,43 @@ class Board:
         outTab.append(playerTab[0])
         return outTab
     
+    def getBestMoveMalin(self, nbrMoves:int):
+        self.fillPossibleBoardsMalin(nbrMoves)
+        res = analyseBoardTree(self)
+        return res
+
     def getBestMove(self, treshold, depth=5)-> tuple[tuple[int, int], tuple[int, int]]:
         self.fillPossibleBoards(treshold, depth)
         res = analyseBoardTree(self)
         return res
+
+    def fillPossibleBoardsMalin(self, nbrOfBoard:int):
+
+        def insertInLeafs(moves:list[Move]):
+            global leafs
+            for m in moves:
+                for i in range(len(leafs) - 1, -1, -1):
+                    if m.board.getValue() > leafs[i]:
+                        leafs.insert(i + 1, m.board)
+        def rec(board:Board, nbrOfBoard: int):
+            global leafs
+            if nbrOfBoard > 0:
+                return
+            leafs.pop(leafs.index(board))
+            board.nextMoves = getAllMoves(board, board.player, board.allies, board.enemies)
+            insertInLeafs(board.nextMoves)
+            # Here we have insert all new leafs to array
+            # And leafs is ordered
+            nbrOfBoard -= len(board.nextMoves)
+            rec(leafs[-1], nbrOfBoard)
+
+        self.nextMoves = getAllMoves(self, self.player, self.allies, self.enemies)
+        nbrOfBoard -= len(self.nextMoves)
+        insertInLeafs(self.nextMoves)
+        for m in self.nextMoves:
+            rec(m.board, nbrOfBoard)
+
+
 
     def fillPossibleBoards(self, threshold, depth=5):
         if depth == 0:
@@ -107,6 +141,9 @@ class Board:
                 # si c'est un move de merde
                 self.nextMoves.pop(self.nextMoves.index(b))
                 popped += 1
+
+leafs:list[Board] = []
+
 
 class Move:
     def __init__(self, board:Board, move: tuple[tuple[int, int], tuple[int, int]]):
