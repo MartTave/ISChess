@@ -1,3 +1,5 @@
+import datetime
+import json
 from random import randrange
 from Player import Player
 import copy
@@ -18,14 +20,27 @@ class Board:
         self.value = self.getValue()
         self.nextMoves:list[Move] = []
 
+    def boardToArray(self):
+        res = []
+        for i in self.boardTab:
+            toAppend = ""
+            for j in i:
+                if j == "":
+                    toAppend += "--,"
+                else:
+                    toAppend += j + ","
+            res.append(toAppend)
+        return res
+
     def boardToString(self):
         res = ""
         for i in self.boardTab:
             line = ""
             for j in i:
                 if j == "":
-                    line += "--"
+                    line += "--,"
                     continue
+                line += j
                 if j != i[-1]:
                     line += ','
             res += line + "\n"
@@ -102,6 +117,7 @@ class Heuristic:
 
     @staticmethod
     def getValue(board:Board, player: Player, settings:object) -> float:
+
         points = 0.0
         if settings["pieces"]["active"]:
             points += Heuristic.getPointsForPieces(board, player, settings)
@@ -280,13 +296,13 @@ def getMovesRook(board:Board, x:int, y:int, player:Player, allies: list[Player],
     for i in range(x + 1, len(data[0])):
         if not checkCell(board, x, y, i, y, allAllies, enemies, res):
             break
-    for i in range(x - 1, 0, -1):
+    for i in range(x - 1, -1, -1):
         if not checkCell(board, x, y, i, y, allAllies, enemies, res):
             break
     for i in range(y + 1, len(data)):
         if not checkCell(board, x, y, x, i, allAllies, enemies, res):
             break
-    for i in range(y - 1, 0, -1):
+    for i in range(y - 1, -1, -1):
         if not checkCell(board, x, y, x, i, allAllies, enemies, res):
             break
     return res
@@ -375,13 +391,41 @@ def getMoveFromBoards(source: Board, dest:Board):
                     pass
 
 movesFound = -1
-depth = 0
+
+
+numberOfPrint = 0
+def logToJson(boardTree: Board):
+    def getChildObject(board: Board):
+        toReturn = []
+        sorted(board.nextMoves, key=lambda x: x.board.value)
+        for m in board.nextMoves:
+            childs = getChildObject(m.board)
+            toReturn.append({
+                "move": m.move,
+                "score": m.board.getValue(),
+                "board": m.board.boardToArray(),
+                "childs": childs
+            })
+        return toReturn
+    childs = getChildObject(boardTree)
+    currentBoard = {
+        "board": boardTree.boardToArray(),
+        "childs": childs
+    }
+    global numberOfPrint
+    fileName = "./logs/" + str(datetime.datetime.now()) + "-" + str(numberOfPrint) + ".json"
+    with open(fileName, 'w') as currentFile:
+        json.dump(currentBoard, currentFile)
+        currentFile.close()
+    numberOfPrint += 1
+
+
+
 def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]]:
     global movesFound
     movesFound = -1
     def getChildsScore(board:Board) -> float:
-        global movesFound, depth
-        depth += 1
+        global movesFound
         movesFound += 1
         totalBrut = 0
         totalRaf = 0
@@ -396,12 +440,6 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
             totalRaf += childScores[index] * (childScores[index] / totalBrut)
             index += 1
         board.value += totalRaf
-        # TODO: Debug purpose only
-        # print("Board at depth : ", depth)
-        # print("Score is : ", board.value)
-        # print("Player color is : ", board.player.color)
-        # print(board.boardToString())
-        depth -= 1
     getChildsScore(rootBoard)
     # Here the values of the child must be updated -> we can choose the greater one
     if len(rootBoard.nextMoves) == 0:
@@ -417,4 +455,7 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
     global popped
     print("Popped ", popped, " moves with treshold")
     popped = 0
+
+    # TODO: Activate this to log all decisions to json files
+    # logToJson(rootBoard)
     return minMove.move

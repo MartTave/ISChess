@@ -25,6 +25,7 @@ class Party():
         lines = lines[1:]
         for l in lines:
             l = l.replace("\n", "")
+            l = l.replace("--", "")
             self.currentData.append(l.split(","))
 
     def printCurrentBoard(self):
@@ -67,9 +68,9 @@ class Party():
         return True
 
 
-current = Party("./Data/maps/defaultTest1.brd", 2)
+current = Party("./Data/maps/testBoard2.brd", 4)
 
-numberOfPlays = 1
+numberOfPlays = -1
 res = True
 while (res):
     res = current.playGame(numberOfPlays)
