@@ -83,34 +83,42 @@ class Board:
 
         def insertInLeafs(moves:list[Move]):
             global leafs
-            for m in moves:
-                for i in range(len(leafs) - 1, -1, -1):
-                    if m.board.getValue() > leafs[i]:
-                        leafs.insert(i + 1, m.board)
-        def rec(board:Board, nbrOfBoard: int):
-            global leafs
-            if nbrOfBoard > 0:
+            if len(moves) == 0:
                 return
-            leafs.pop(leafs.index(board))
-            board.nextMoves = getAllMoves(board, board.player, board.allies, board.enemies)
-            insertInLeafs(board.nextMoves)
+            startIndex = 0
+            if len(leafs) == 0:
+                startIndex = 1
+                leafs.append(moves[0])
+            for m in moves[startIndex:]:
+                for i in range(len(leafs) - 1, -1, -1):
+                    if m.board.getValue() > leafs[i].board.getValue():
+                        leafs.insert(i + 1, m)
+                    elif i == 0:
+                        leafs.insert(0, m)
+        def rec(m:Move, nbrOfBoard: int):
+            global leafs
+            if nbrOfBoard <= 0:
+                return
+            leafs.pop(leafs.index(m))
+            m.board.nextMoves = getAllMoves(m.board)
+            insertInLeafs(m.board.nextMoves)
             # Here we have insert all new leafs to array
             # And leafs is ordered
-            nbrOfBoard -= len(board.nextMoves)
+            nbrOfBoard -= len(m.board.nextMoves)
             rec(leafs[-1], nbrOfBoard)
 
-        self.nextMoves = getAllMoves(self, self.player, self.allies, self.enemies)
+        self.nextMoves = getAllMoves(self)
         nbrOfBoard -= len(self.nextMoves)
         insertInLeafs(self.nextMoves)
         for m in self.nextMoves:
-            rec(m.board, nbrOfBoard)
+            rec(m, nbrOfBoard)
 
 
 
     def fillPossibleBoards(self, threshold, depth=5):
         if depth == 0:
             return
-        self.nextMoves = getAllMoves(self, self.player, self.allies, self.enemies)
+        self.nextMoves = getAllMoves(self)
         # Activate only if treshold pruning is deactivated
         # for m in self.nextMoves:
         #     m.board.fillPossibleBoards(threshold, depth - 1)
@@ -142,13 +150,12 @@ class Board:
                 self.nextMoves.pop(self.nextMoves.index(b))
                 popped += 1
 
-leafs:list[Board] = []
-
-
 class Move:
     def __init__(self, board:Board, move: tuple[tuple[int, int], tuple[int, int]]):
         self.board = board
         self.move = move
+
+leafs:list[Move] = []
 
 class Heuristic:
 
@@ -389,8 +396,11 @@ def getQueenMoves(board: Board, x: int, y: int, player:Player, allies:list[Playe
     part2 = getMaladeMoves(board, x, y, player, allies, enemies)
     return part1 + part2
 
-def getAllMoves(board: Board, player: Player, allies: list[Player], enemies: list[Player])->list[Move]:
+def getAllMoves(board: Board)->list[Move]:
     res: list[Move] = []
+    player = board.player
+    allies = board.allies
+    enemies = board.enemies
     for y in range(0, len(board.boardTab)):
         for x in range(0, len(board.boardTab[y])):
             current = board.boardTab[y][x]
