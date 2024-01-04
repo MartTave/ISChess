@@ -3,21 +3,34 @@ import json
 from random import randrange
 from Player import Player
 import copy
+
+from tools.readJson import readJson
 CLACLUL_PARAM = 50
 
 popped = 0
 
 class Board:
-    RANGEREOUPAS = True
+    RANGEREOUPAS = False
 
-    def __init__(self, setup, player: Player, allies: list[Player], enemies:list[Player], playerOrder:list[Player], settings:object):
+    def __init__(self, setup, player: Player, allies: list[Player], enemies:list[Player], playerOrder:list[Player], settings:object, fullBoard:bool = False):
         self.settings = settings
         self.boardTab = setup
         self.playerOrder = playerOrder
         self.player = player
         self.allies = allies
         self.enemies = enemies
-        self.value = self.getValue()
+        self.values = {
+            
+        }
+        self.teams = {
+
+        }
+        for p in playerOrder:
+            if p.team not in self.values:
+                self.values[p.team] = 0
+                self.teams[p.color] = p.team
+        if fullBoard:
+            Heuristic.getPointForAllBoard(self, settings)
         self.nextMoves:list[Move] = []
 
     def boardToArray(self):
@@ -77,36 +90,39 @@ class Board:
         if depth == 0:
             return
         self.nextMoves = getAllMoves(self, self.player, self.allies, self.enemies)
+        for m in self.nextMoves:
+            Heuristic.getValueFromMove(self, m, self.settings)
         # Activate only if treshold pruning is deactivated
         # for m in self.nextMoves:
         #     m.board.fillPossibleBoards(threshold, depth - 1)
         if len(self.nextMoves) == 0:
             return
         #on sait pas si on range, faut voir
-        minValue = 10000
-        if self.RANGEREOUPAS:
-            #si la constante dit qu'on range
-            sorted(self.nextMoves, key=lambda x: x.board.value)
-            minValue = self.nextMoves[-1].board.value
-        else:
-            #si la contante dit qu'on s'en fout
-            for i in self.nextMoves:
-                #pour chaque Board enfant
-                if i.value < minValue:
-                   #on cherche le board avec la plus grande valeur
-                   minValue = i.board.value
+        #TODO: ça si si on veut un treshold
+        # minValue = 10000
+        # if self.RANGEREOUPAS:
+        #     #si la constante dit qu'on range
+        #     sorted(self.nextMoves, key=lambda x: x.board.value)
+        #     minValue = self.nextMoves[-1].board.value
+        # else:
+        #     #si la contante dit qu'on s'en fout
+        #     for i in self.nextMoves:
+        #         #pour chaque Board enfant
+        #         if i.value < minValue:
+        #            #on cherche le board avec la plus petite valeur
+        #            minValue = i.board.value
 
-        currentTresh = minValue + (threshold)
+        # currentTresh = minValue + (threshold)
         global popped
         for b in self.nextMoves:
             #pour chaque Board enfant
-            if b.board.value < currentTresh:
+            # if b.board.value < currentTresh:
                 # si c'est un move suffisament interessant
-                b.board.fillPossibleBoards(threshold, depth - 1) #on inverse les valeurs pour par réécrire la ligne
-            else:
-                # si c'est un move de merde
-                self.nextMoves.pop(self.nextMoves.index(b))
-                popped += 1
+            b.board.fillPossibleBoards(threshold, depth - 1) #on inverse les valeurs pour par réécrire la ligne
+            # else:
+            #     # si c'est un move de merde
+            #     self.nextMoves.pop(self.nextMoves.index(b))
+            #     popped += 1
 
 class Move:
     def __init__(self, board:Board, move: tuple[tuple[int, int], tuple[int, int]]):
@@ -116,23 +132,32 @@ class Move:
 class Heuristic:
 
     @staticmethod
-    def getValue(board:Board, player: Player, settings:object) -> float:
-
-        points = 0.0
-        if settings["pieces"]["active"]:
-            points += Heuristic.getPointsForPieces(board, player, settings)
-        return points
+    def getValueFromMove(oldBoard:Board, move:Move, settings:object):
+        contentFromOldCell = oldBoard.boardTab[move.move[1][0]][move.move[1][1]]
+        move.board.values = oldBoard.values
+        if contentFromOldCell != "":
+            res = Heuristic.getPointAndTeamFromCell(oldBoard, move.move[1][1], move.move[1][0], settings)
+            move.board.values[res[0]] -= res[1]
+        
     
     @staticmethod
-    def getPointsForPieces(board:Board, player:Player, settings:object) -> float:
-        points = 0.0
-        data:list[list[str]] = board.boardTab
-        for lines in data:
-            for value in lines:
-                # Checking for empty cells and if piece has the player has owner
-                if value != "" and value != "--" and value[1] == player.color:
-                    points += settings["pieces"]["values"][value[0]]
-        return points * settings["pieces"]["factor"]
+    def getPointForAllBoard(board:Board, settings:object):
+        for y in range(0, len(board.boardTab)):
+            for x in range(0, len(board.boardTab[y])):
+                if settings["pieces"]["active"]:
+                    res = Heuristic.getPointAndTeamFromCell(board, x, y, settings)
+                    if res[0] != -1:
+                        board.values[res[0]] += res[1]
+
+    @staticmethod
+    def getPointAndTeamFromCell(board:Board, x:int, y:int, settings:object) -> tuple[int, float]:
+        # Checking for empty cells and if piece has the player has owner
+        value = board.boardTab[y][x]
+        if value != "" and value != "--":
+             # Getting the right team by color
+            team = board.teams[value[1]]
+            return (team, settings["pieces"]["values"][value[0]])
+        return (-1, -1)
 
 
 
@@ -397,12 +422,11 @@ numberOfPrint = 0
 def logToJson(boardTree: Board):
     def getChildObject(board: Board):
         toReturn = []
-        sorted(board.nextMoves, key=lambda x: x.board.value)
         for m in board.nextMoves:
             childs = getChildObject(m.board)
             toReturn.append({
                 "move": m.move,
-                "score": m.board.getValue(),
+                "score": m.board.values,
                 "board": m.board.boardToArray(),
                 "childs": childs
             })
@@ -410,6 +434,7 @@ def logToJson(boardTree: Board):
     childs = getChildObject(boardTree)
     currentBoard = {
         "board": boardTree.boardToArray(),
+        "score": boardTree.values,
         "childs": childs
     }
     global numberOfPrint
@@ -432,30 +457,30 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
         childScores = []
         for c in board.nextMoves:
             getChildsScore(c.board)
-            newVal = getProba(c.board.value)
+            newVal = getProba(c.board.values[c.board.player.team])
             childScores.append(newVal)
             totalBrut += newVal
         index = 0
         for c in board.nextMoves:
             totalRaf += childScores[index] * (childScores[index] / totalBrut)
             index += 1
-        board.value += totalRaf
-    getChildsScore(rootBoard)
+        board.values[board.player.team] += totalRaf
+    #getChildsScore(rootBoard)
     # Here the values of the child must be updated -> we can choose the greater one
     if len(rootBoard.nextMoves) == 0:
         return
     minMove = rootBoard.nextMoves[randrange(0, len(rootBoard.nextMoves))]
-    min = minMove.board.value
+    min = minMove.board.values[minMove.board.player.team]
     for c in rootBoard.nextMoves:
-        if c.board.value < min:
+        if c.board.values[c.board.player.team] < min:
             #print("[SYS] Found a better move")
             minMove = c
-            min = c.board.value
+            min = c.board.values[c.board.player.team]
     print("Found a move in ", movesFound, " total moves")
     global popped
     print("Popped ", popped, " moves with treshold")
     popped = 0
 
     # TODO: Activate this to log all decisions to json files
-    # logToJson(rootBoard)
+    logToJson(rootBoard)
     return minMove.move
