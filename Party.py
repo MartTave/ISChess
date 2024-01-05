@@ -51,7 +51,7 @@ class Party():
             return False
         currentP: Bot = self.bots[self.currentPlayerOrder[0][1]]
         start = time.time()
-        move = currentP.play(''.join(self.currentPlayerOrder), self.currentData, 0.75)
+        move = currentP.play(''.join(self.currentPlayerOrder), self.currentData, 1000)
         end = time.time()
         elapsed = end - start
         print("Time elapsed is ", "{:10.4f}".format(elapsed), "s")
@@ -68,9 +68,9 @@ class Party():
         return True
 
 
-current = Party("./Data/maps/default.brd", 10000)
+current = Party("./Data/maps/easy_4.brd", 3)
 
-numberOfPlays = -1
+numberOfPlays = 1
 res = True
 while (res):
     res = current.playGame(numberOfPlays)

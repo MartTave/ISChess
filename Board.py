@@ -76,14 +76,7 @@ class Board:
         start = time.time()
         timeAllowedExploration = timeAllowed / 100.0 * 97.5
         self.fillPossibleBoards(treshold, timeAllowedExploration, depth)
-        afterFill = time.time()
         res = analyseBoardTree(self)
-        final = time.time()
-        fill = afterFill - start
-        analyse = final - afterFill
-        total = final - start
-        print("Rapport : ", fill / (total / 100), " fill and ", analyse / (total / 100))
-        print("Total is : ", total)
         return res
 
     def fillPossibleBoards(self, threshold, timeTarget, depth=5):
@@ -417,7 +410,7 @@ def logToJson(boardTree: Board):
             childs = getChildObject(m.board)
             toReturn.append({
                 "move": m.move,
-                "score": m.board.getValue(),
+                "score": m.board.value,
                 "board": m.board.boardToArray(),
                 "childs": childs
             })
@@ -465,7 +458,7 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
     min = minMove.board.value
     for c in rootBoard.nextMoves:
         if c.board.value < min:
-            #print("[SYS] Found a better move")
+            print("[SYS] Found a better move")
             minMove = c
             min = c.board.value
     print("Found a move in ", movesFound, " total moves")
