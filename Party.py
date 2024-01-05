@@ -68,9 +68,9 @@ class Party():
         return True
 
 
-current = Party("./Data/maps/testBoard2.brd", 4)
+current = Party("./Data/maps/default.brd", 1)
 
-numberOfPlays = -1
+numberOfPlays = 1
 res = True
 while (res):
     res = current.playGame(numberOfPlays)

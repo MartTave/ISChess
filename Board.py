@@ -3,8 +3,10 @@ import json
 from random import randrange
 from Player import Player
 import copy
+import time
 CLACLUL_PARAM = 50
 
+start = 0
 popped = 0
 
 class Board:
@@ -68,14 +70,28 @@ class Board:
         outTab.append(playerTab[0])
         return outTab
     
-    def getBestMove(self, treshold, depth=5)-> tuple[tuple[int, int], tuple[int, int]]:
-        self.fillPossibleBoards(treshold, depth)
+    def getBestMove(self, treshold, timeAllowed, depth=5)-> tuple[tuple[int, int], tuple[int, int]]:
+        global start
+        start = time.time()
+        timeAllowedExploration = timeAllowed / 100 * 98
+        self.fillPossibleBoards(treshold, timeAllowedExploration, depth)
+        afterFill = time.time()
         res = analyseBoardTree(self)
+        final = time.time()
+        fill = afterFill - start
+        analyse = final - afterFill
+        total = final - start
+        print("Rapport : ", fill / (total / 100), " fill and ", analyse / (total / 100))
         return res
 
-    def fillPossibleBoards(self, threshold, depth=5):
+    def fillPossibleBoards(self, threshold, timeTarget, depth=5):
         if depth == 0:
             return
+        # global start
+        # current = time.time()
+        # elapsed = current - start
+        # if elapsed >= timeTarget:
+        #     return
         self.nextMoves = getAllMoves(self, self.player, self.allies, self.enemies)
         # Activate only if treshold pruning is deactivated
         # for m in self.nextMoves:
