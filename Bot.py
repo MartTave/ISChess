@@ -35,6 +35,7 @@ class Bot():
                     if p.orientation == 4:
                         p.orientation = 0
         currentBoard = Board(board, player, allies, enemies, playerOrder, self.settings)
+        time_budget -= 0.01
         move = currentBoard.getBestMove(1000, time_budget, self.depthAllowed)
         return move
 

@@ -7,6 +7,7 @@ import time
 CLACLUL_PARAM = 50
 
 start = 0
+
 popped = 0
 
 class Board:
@@ -73,7 +74,7 @@ class Board:
     def getBestMove(self, treshold, timeAllowed, depth=5)-> tuple[tuple[int, int], tuple[int, int]]:
         global start
         start = time.time()
-        timeAllowedExploration = timeAllowed / 100 * 98
+        timeAllowedExploration = timeAllowed / 100.0 * 97.5
         self.fillPossibleBoards(treshold, timeAllowedExploration, depth)
         afterFill = time.time()
         res = analyseBoardTree(self)
@@ -82,22 +83,23 @@ class Board:
         analyse = final - afterFill
         total = final - start
         print("Rapport : ", fill / (total / 100), " fill and ", analyse / (total / 100))
+        print("Total is : ", total)
         return res
 
     def fillPossibleBoards(self, threshold, timeTarget, depth=5):
-        if depth == 0:
-            return
-        # global start
-        # current = time.time()
-        # elapsed = current - start
-        # if elapsed >= timeTarget:
-        #     return
+        if depth <= 0:
+            return False
+        current = time.time()
+        global start
+        elapsed = current - start
+        if elapsed >= timeTarget:
+            return False
         self.nextMoves = getAllMoves(self, self.player, self.allies, self.enemies)
         # Activate only if treshold pruning is deactivated
         # for m in self.nextMoves:
         #     m.board.fillPossibleBoards(threshold, depth - 1)
         if len(self.nextMoves) == 0:
-            return
+            return True
         #on sait pas si on range, faut voir
         minValue = 10000
         if self.RANGEREOUPAS:
@@ -118,11 +120,13 @@ class Board:
             #pour chaque Board enfant
             if b.board.value < currentTresh:
                 # si c'est un move suffisament interessant
-                b.board.fillPossibleBoards(threshold, depth - 1) #on inverse les valeurs pour pas réécrire la ligne
+                if not b.board.fillPossibleBoards(threshold, timeTarget, depth - 1): #on inverse les valeurs pour pas réécrire la ligne
+                    break
             else:
                 # si c'est un move de merde
                 self.nextMoves.pop(self.nextMoves.index(b))
                 popped += 1
+        return True
 
 class Move:
     def __init__(self, board:Board, move: tuple[tuple[int, int], tuple[int, int]]):
