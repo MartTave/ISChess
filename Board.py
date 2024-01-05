@@ -102,7 +102,7 @@ class Board:
             #pour chaque Board enfant
             if b.board.value < currentTresh:
                 # si c'est un move suffisament interessant
-                b.board.fillPossibleBoards(threshold, depth - 1) #on inverse les valeurs pour par réécrire la ligne
+                b.board.fillPossibleBoards(threshold, depth - 1) #on inverse les valeurs pour pas réécrire la ligne
             else:
                 # si c'est un move de merde
                 self.nextMoves.pop(self.nextMoves.index(b))
@@ -135,14 +135,12 @@ class Heuristic:
 
 
 
-
-
 def isInBoard(board:Board, x:int, y:int):
     return x >= 0 and x < len(board.boardTab[0]) and y >= 0 and y < len(board.boardTab)
 
 
 
-# This method return -1 is out of board
+# This method return -1 if out of board
 # 1 if cell contain ally
 # 2 if cell contain enemy
 def checkCellsContent(board: Board, x: int, y:int, allies: list[Player], enemies:list[Player])->int:
@@ -181,15 +179,15 @@ def checkCell(board: Board, startX:int, startY:int, endX:int, endY:int, allies:l
 
 def getNextPiongMoves(player:Player, x: int, y: int) -> tuple[int, int]:
     match player.orientation:
-        case 2:
-            # Top
-            return (x, y - 1)
-        case 1:
-            # Left
-            return (x - 1, y)
         case 0:
             # Bottom
             return (x, y + 1)
+        case 1:
+            # Left
+            return (x - 1, y)
+        case 2:
+            # Top
+            return (x, y - 1)
         case 3:
             # Right
             return (x + 1, y)
@@ -197,15 +195,15 @@ def getNextPiongMoves(player:Player, x: int, y: int) -> tuple[int, int]:
 
 def getPromotingLine(player: Player, board: Board) -> tuple[str, int]:
     match player.orientation:
-        case 2:
-            # Top -> first y row is promoting
-            return ('y', 0)
-        case 1:
-            # Left -> first x column is promoting
-            return ('x', 0)
         case 0:
             # Bottom -> last y row is promoting
             return ('y', len(board.boardTab) - 1)
+        case 1:
+            # Left -> first x column is promoting
+            return ('x', 0)
+        case 2:
+            # Top -> first y row is promoting
+            return ('y', 0)
         case 3:
             # Right -> last x column is promoting
             return ('x', len(board.boardTab[0]) - 1)
@@ -216,15 +214,15 @@ def getNextPiongAttack(player: Player, x: int, y: int) -> tuple[tuple[int, int],
     bottomLeft = (x - 1, y + 1)
     bottomRight = (x + 1, y + 1)
     match player.orientation:
-        case 2:
-            # Top -> top right/top left
-            return (topRight, topLeft)
-        case 1:
-            # Left -> top left/bottom left
-            return (topLeft, bottomLeft)
         case 0:
             # Bottom -> bottom left/ bottom right
             return (bottomLeft, bottomRight)
+        case 1:
+            # Left -> top left/bottom left
+            return (topLeft, bottomLeft)
+        case 2:
+            # Top -> top right/top left
+            return (topRight, topLeft)
         case 3:
             # Right -> top right/ bottom right
             return (topRight, bottomRight)
@@ -389,8 +387,6 @@ def getMoveFromBoards(source: Board, dest:Board):
                     # This mean we have found the pieces that moved
                     pass
 
-movesFound = -1
-
 
 numberOfPrint = 0
 def logToJson(boardTree: Board):
@@ -419,6 +415,8 @@ def logToJson(boardTree: Board):
     numberOfPrint += 1
 
 
+
+movesFound = -1
 
 def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]]:
     global movesFound
