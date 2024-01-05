@@ -5,11 +5,14 @@ from Board import Board
 from Player import Player
 from tools.readJson import readJson
 from Bots.ChessBotList import register_chess_bot 
+import sys
+sys.setrecursionlimit(100000)
 
 class Bot():
 
 
     def __init__(self, configPath: str, depthAllowed=5, needRotating=True) -> None:
+            
             self.settings = readJson(configPath)
             self.needRotating = needRotating
             self.depthAllowed = depthAllowed
@@ -35,7 +38,7 @@ class Bot():
                     if p.orientation == 4:
                         p.orientation = 0
         currentBoard = Board(board, player, allies, enemies, playerOrder, self.settings)
-        time_budget -= 0.01
+        time_budget -= 0.05
         move = currentBoard.getBestMove(1000, time_budget, self.depthAllowed)
         return move
 
