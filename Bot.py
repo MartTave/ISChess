@@ -43,6 +43,9 @@ class Bot():
         return move
 
 
-myBot = Bot("./settings/v1.json", 4)
+myBot = Bot("./settings/v1.json", 10000)
+mySecondBot = Bot("./settings/v2.json", 10000)
 
 register_chess_bot("Bot_1", myBot.play)
+register_chess_bot("Bot_2", mySecondBot.play)
+

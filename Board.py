@@ -131,7 +131,9 @@ class Heuristic:
     @staticmethod
     def getValue(board:Board, player: Player, settings:object) -> float:
         points = 0.0
-        if settings["pieces"]["active"]:
+        if settings["cases"]["active"]:
+            points += Heuristic.getPointsForPiecesAndCases(board, player, settings)
+        else:
             points += Heuristic.getPointsForPieces(board, player, settings)
         return points
     
@@ -146,6 +148,18 @@ class Heuristic:
                     points += settings["pieces"]["values"][value[0]]
         return points * settings["pieces"]["factor"]
 
+    @staticmethod
+    def getPointsForPiecesAndCases(board:Board, player:Player, settings:object) -> float:
+        pointsPieces = 0.0
+        pointsCases = 0.0
+        data:list[list[str]] = board.boardTab
+        for lines in range(0,len(data)):
+            for value in range(0,len(data[lines])):
+                # Checking for empty cells and if piece has the player as owner
+                if data[lines][value] != "" and data[lines][value] != "--" and data[lines][value][1] == player.color:
+                    pointsPieces += settings["pieces"]["values"][data[lines][value][0]]
+                    pointsCases += settings["cases"]["values"]["lignes"][str(lines)] * settings["cases"]["values"]["colonnes"][str(value)]
+        return pointsPieces * settings["pieces"]["factor"] + pointsCases * settings["cases"]["factor"]
 
 
 def isInBoard(board:Board, x:int, y:int):
