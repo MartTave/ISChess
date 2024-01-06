@@ -82,21 +82,33 @@ class Party():
                         break
         if not kingWhiteFound:
             print("Black has won")
-            return False
+            return (False,0)
         elif not kingBlackFound:
             print("White has won")
-            return False
+            return (False,1)
 
 
 
         
-        return True
+        return True,2
 
+blackWins = 0
+whiteWins = 0
+nGames = 5
+for i in range(0,nGames):
+    current = Party("./Data/maps/default.brd", 100000)
+    numberOfPlays = -1
 
-current = Party("./Data/maps/default.brd", 100000)
+    res = True
+    winner = 3
+    while (res):
+        res,winner = current.playGame(numberOfPlays)
+        numberOfPlays -= 1
+    if winner == 0:
+        blackWins += 1
+    elif winner == 1:
+        whiteWins += 1
 
-numberOfPlays = -1
-res = True
-while (res):
-    res = current.playGame(numberOfPlays)
-    numberOfPlays -= 1
+print("RESULTATS FINAUX DE LA BASTON: ")
+print("NOMBRE DE VICTOIRES DES BLANCS: ", whiteWins)
+print("NOMBRE DE VICTOIRES DES NOIRS: ", blackWins)
