@@ -2,7 +2,7 @@
     "pieces":
     {
         "active": true,
-        "factor": 1,
+        "factor": 1.0,
         "values": {
             "k": 100,
             "q": 9,
@@ -38,5 +38,6 @@
                 "7": 1
             }
         }
-    }
+    },
+    "stochastic": false
 }

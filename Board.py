@@ -1,11 +1,11 @@
 import datetime
 import json
-from random import randrange
+from random import randrange, randint, choices
 from Player import Player
 import copy
 import time
 CLACLUL_PARAM = 50
-
+counter = 0
 start = 0
 
 popped = 0
@@ -50,6 +50,8 @@ class Board:
         return res
 
     def getValue(self)-> float:
+        global counter
+        counter += 1
         # Valuing the board with the player that played to get to this board
         return Heuristic.getValue(self, self.player, self.settings)
 
@@ -468,13 +470,25 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
     # Here the values of the child must be updated -> we can choose the greater one
     if len(rootBoard.nextMoves) == 0:
         return
-    minMove = rootBoard.nextMoves[randrange(0, len(rootBoard.nextMoves))]
-    min = minMove.board.value
-    for c in rootBoard.nextMoves:
-        if c.board.value < min:
-            print("[SYS] Found a better move")
-            minMove = c
-            min = c.board.value
+    choosenMove = rootBoard.nextMoves[randrange(0, len(rootBoard.nextMoves))]
+    if rootBoard.settings["stochastic"]:
+        print("Choosing with stochastic !")
+        # We need to get percentage
+        moves = rootBoard.nextMoves
+        values = []
+        for c in moves:
+            values.append(c.board.value)
+        print(values)
+        choosenMove = choices(moves, values)[0]
+    else:
+        print("Move choosen is deterministic")
+        minMove = choosenMove
+        min = minMove.board.value
+        for c in rootBoard.nextMoves:
+            if c.board.value < min:
+                print("[SYS] Found a better move")
+                minMove = c
+                min = c.board.value
     print("Found a move in ", movesFound, " total moves")
     global popped
     print("Popped ", popped, " moves with treshold")
@@ -482,4 +496,4 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
 
     # TODO: Activate this to log all decisions to json files
     # logToJson(rootBoard)
-    return minMove.move
+    return choosenMove.move

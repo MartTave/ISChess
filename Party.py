@@ -4,6 +4,7 @@ from textwrap import wrap
 from Bot import Bot
 import os
 import time
+import numpy
 
 # Method to clear console cross os
 def cls():
@@ -43,7 +44,7 @@ class Party():
         self.parseBoard(boardPath)
         self.bots = {}
         self.bots["w"] = Bot("./settings/v1.json", depthAllowed)
-        self.bots["b"] = Bot("./settings/v1.json", depthAllowed)
+        self.bots["b"] = Bot("./settings/v2.json", depthAllowed)
         self.printCurrentBoard()
 
     def playGame(self, numberOfPlays=-1):
@@ -51,7 +52,7 @@ class Party():
             return False
         currentP: Bot = self.bots[self.currentPlayerOrder[0][1]]
         start = time.time()
-        move = currentP.play(''.join(self.currentPlayerOrder), self.currentData, 1000)
+        move = currentP.play(''.join(self.currentPlayerOrder), self.currentData, 0.75)
         end = time.time()
         elapsed = end - start
         print("Time elapsed is ", "{:10.4f}".format(elapsed), "s")
@@ -65,12 +66,36 @@ class Party():
         self.currentPlayerOrder[0] = self.currentPlayerOrder[1]
         self.currentPlayerOrder[1] = bcup
         self.printCurrentBoard()
+        self.currentData = numpy.rot90(self.currentData).tolist()
+        self.currentData = numpy.rot90(self.currentData).tolist()
+        kingWhiteFound = False
+        kingBlackFound = False
+        for i in self.currentData:
+            for j in i:
+                if j == "kw":
+                    kingWhiteFound = True
+                    if kingBlackFound:
+                        break
+                elif j == "kb":
+                    kingBlackFound = True
+                    if kingWhiteFound:
+                        break
+        if not kingWhiteFound:
+            print("Black has won")
+            return False
+        elif not kingBlackFound:
+            print("White has won")
+            return False
+
+
+
+        
         return True
 
 
-current = Party("./Data/maps/easy_4.brd", 3)
+current = Party("./Data/maps/default.brd", 100000)
 
-numberOfPlays = 1
+numberOfPlays = -1
 res = True
 while (res):
     res = current.playGame(numberOfPlays)

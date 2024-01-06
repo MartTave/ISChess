@@ -38,5 +38,6 @@
                 "7": 1
             }
         }
-    }
+    },
+    "stochastic": true
 }
