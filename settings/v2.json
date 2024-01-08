@@ -14,7 +14,7 @@
     },
     "cases":
     {
-        "active": true,
+        "active": false,
         "factor": 1,
         "values": {
             "colonnes": {

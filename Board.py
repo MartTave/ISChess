@@ -477,8 +477,7 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
         moves = rootBoard.nextMoves
         values = []
         for c in moves:
-            values.append(c.board.value)
-        print(values)
+            values.append(1 / c.board.value)
         choosenMove = choices(moves, values)[0]
     else:
         print("Move choosen is deterministic")
