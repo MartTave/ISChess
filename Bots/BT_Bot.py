@@ -1,7 +1,6 @@
 
 
 from textwrap import wrap
-from tools.readJson import readJson
 from Bots.ChessBotList import register_chess_bot 
 import sys
 import datetime
@@ -10,6 +9,15 @@ from random import randrange, choices
 import copy
 import time
 sys.setrecursionlimit(100000)
+
+pieceValue = {
+    "k": 100,
+    "q": 9,
+    "n": 3,
+    "b": 3,
+    "p": 1,
+    "r": 5
+}
 
 
 class Player:
@@ -31,8 +39,7 @@ popped = 0
 class Board:
     RANGEREOUPAS = True
 
-    def __init__(self, setup, player: Player, allies: list[Player], enemies:list[Player], playerOrder:list[Player], settings:object):
-        self.settings = settings
+    def __init__(self, setup, player: Player, allies: list[Player], enemies:list[Player], playerOrder:list[Player]):
         self.boardTab = setup
         self.playerOrder = playerOrder
         self.player = player
@@ -71,7 +78,7 @@ class Board:
         global counter
         counter += 1
         # Valuing the board with the player that played to get to this board
-        return Heuristic.getValue(self, self.player, self.settings)
+        return Heuristic.getValue(self, self.player)
 
     def getTeams(self, player: Player) -> tuple[list[Player], list[Player]]:
         allies = [player]
@@ -149,37 +156,22 @@ class Move:
 class Heuristic:
 
     @staticmethod
-    def getValue(board:Board, player: Player, settings:object) -> float:
+    def getValue(board:Board, player: Player) -> float:
         points = 0.0
-        if settings["cases"]["active"]:
-            points += Heuristic.getPointsForPiecesAndCases(board, player, settings)
-        else:
-            points += Heuristic.getPointsForPieces(board, player, settings)
+        points += Heuristic.getPointsForPieces(board, player)
         return points
     
     @staticmethod
-    def getPointsForPieces(board:Board, player:Player, settings:object) -> float:
+    def getPointsForPieces(board:Board, player:Player) -> float:
+        global pieceValue
         points = 0.0
         data:list[list[str]] = board.boardTab
         for lines in data:
             for value in lines:
                 # Checking for empty cells and if piece has the player as owner
                 if value != "" and value != "--" and value[1] == player.color:
-                    points += settings["pieces"]["values"][value[0]]
-        return points * settings["pieces"]["factor"]
-
-    @staticmethod
-    def getPointsForPiecesAndCases(board:Board, player:Player, settings:object) -> float:
-        pointsPieces = 0.0
-        pointsCases = 0.0
-        data:list[list[str]] = board.boardTab
-        for lines in range(0,len(data)):
-            for value in range(0,len(data[lines])):
-                # Checking for empty cells and if piece has the player as owner
-                if data[lines][value] != "" and data[lines][value] != "--" and data[lines][value][1] == player.color:
-                    pointsPieces += settings["pieces"]["values"][data[lines][value][0]]
-                    pointsCases += settings["cases"]["values"]["lignes"][str(lines)] * settings["cases"]["values"]["colonnes"][str(value)]
-        return pointsPieces * settings["pieces"]["factor"] + pointsCases * settings["cases"]["factor"]
+                    points += pieceValue[value[0]]
+        return points
 
 
 def isInBoard(board:Board, x:int, y:int):
@@ -211,7 +203,7 @@ def movePiece(board: Board, startX: int, startY: int, endX:int, endY: int)->Move
     data[startY][startX] = ""
     nextPlayerOrder = board.playerRotate(board.playerOrder)
     nextPlayerTeams = board.getTeams(nextPlayerOrder[0])
-    return Move(Board(data, nextPlayerOrder[0], nextPlayerTeams[0], nextPlayerTeams[1], nextPlayerOrder, board.settings), ((startY, startX), (endY, endX)))
+    return Move(Board(data, nextPlayerOrder[0], nextPlayerTeams[0], nextPlayerTeams[1], nextPlayerOrder), ((startY, startX), (endY, endX)))
 
 def checkCell(board: Board, startX:int, startY:int, endX:int, endY:int, allies:list[Player], enemies:list[Player], resList:list[Move])->bool:
     status = checkCellsContent(board, endX, endY, allies, enemies)
@@ -489,23 +481,22 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
     if len(rootBoard.nextMoves) == 0:
         return
     choosenMove = rootBoard.nextMoves[randrange(0, len(rootBoard.nextMoves))]
-    if rootBoard.settings["stochastic"]:
-        print("Choosing with stochastic !")
-        # We need to get percentage
-        moves = rootBoard.nextMoves
-        values = []
-        for c in moves:
-            values.append(c.board.value)
-        choosenMove = choices(moves, values)[0]
-    else:
-        print("Move choosen is deterministic")
-        minMove = choosenMove
-        min = minMove.board.value
-        for c in rootBoard.nextMoves:
-            if c.board.value < min:
-                print("[SYS] Found a better move")
-                minMove = c
-                min = c.board.value
+    # if rootBoard.settings["stochastic"]:
+    #     print("Choosing with stochastic !")
+    #     # We need to get percentage
+    #     moves = rootBoard.nextMoves
+    #     values = []
+    #     for c in moves:
+    #         values.append(c.board.value)
+    #     choosenMove = choices(moves, values)[0]
+    print("Move choosen is deterministic")
+    minMove = choosenMove
+    min = minMove.board.value
+    for c in rootBoard.nextMoves:
+        if c.board.value < min:
+            print("[SYS] Found a better move")
+            minMove = c
+            min = c.board.value
     print("Found a move in ", movesFound, " total moves")
     global popped
     print("Popped ", popped, " moves with treshold")
@@ -519,9 +510,7 @@ def analyseBoardTree(rootBoard: Board) -> tuple[tuple[int, int], tuple[int, int]
 class Bot():
 
 
-    def __init__(self, configPath: str, depthAllowed=5, needRotating=True) -> None:
-            
-            self.settings = readJson(configPath)
+    def __init__(self, depthAllowed=5, needRotating=True) -> None:
             self.needRotating = needRotating
             self.depthAllowed = depthAllowed
 
@@ -545,14 +534,14 @@ class Bot():
                     p.orientation += 1
                     if p.orientation == 4:
                         p.orientation = 0
-        currentBoard = Board(board, player, allies, enemies, playerOrder, self.settings)
+        currentBoard = Board(board, player, allies, enemies, playerOrder)
         time_budget -= 0.05
         move = currentBoard.getBestMove(1000, time_budget, self.depthAllowed)
         return move
 
 
 
-myBot = Bot("./Bots/BT_Settings.json", 100000)
+myBot = Bot(100000)
 
 register_chess_bot("BT_Bot", myBot.play)
 
