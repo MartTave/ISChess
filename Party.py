@@ -1,7 +1,7 @@
 
 
 from textwrap import wrap
-from Bot import Bot
+from Bots.BT_Bot import Bot
 import os
 import time
 import numpy

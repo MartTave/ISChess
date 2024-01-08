@@ -39,5 +39,5 @@
             }
         }
     },
-    "stochastic": true
+    "stochastic": false
 }
