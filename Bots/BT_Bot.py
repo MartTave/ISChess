@@ -7,7 +7,6 @@ import sys
 import datetime
 import json
 from random import randrange, choices
-from Player import Player
 import copy
 import time
 sys.setrecursionlimit(100000)
@@ -552,8 +551,8 @@ class Bot():
         return move
 
 
-myBot = Bot("./settings/v1.json", 100000)
-mySecondBot = Bot("./settings/v2.json", 10000)
+
+myBot = Bot("./Bots/BT_Settings.json", 100000)
 
 register_chess_bot("BT_Bot", myBot.play)
 
