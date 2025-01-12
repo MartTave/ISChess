@@ -1,4 +1,5 @@
 import os.path
+import re
 
 from PyQt6 import QtCore, QtWidgets, QtGui
 from PyQt6 import uic
@@ -155,42 +156,121 @@ class ChessArena(QtWidgets.QWidget):
             self.add_system_message("# " + str(COLOR_NAMES[winner]) + " won the match")
 
     def select_and_load_board(self):
-        path = QtWidgets.QFileDialog.getOpenFileName(self, "Select board", self.BOARDS_DIR, "Board File (*.brd)")
+        path = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Select board",
+            self.BOARDS_DIR,
+            "Board File (*.brd *.fen)"
+        )
 
         if path is None:
             return
         path = path[0]
 
-        self.board = self.load_board(path)
-
-        if self.board is None:
+        board = self.load_board(path)
+        if board is None:
             return
+
+        self.board = board
 
         self.setup_board()
         self.setup_players()
 
     def load_board(self, path):
-        try:
-            with open(path, "r") as f:
-                data = f.read()
-
-                lines = data.split("\n")
-                self.player_order = lines[0]
-                elems = [l.replace('--', '').split(",") for l in lines[1:]]
-
-                #   Protection against final empty lines
-                while len(elems) > 0 and len(elems[-1]) == 0:
-                    del elems[-1]
-
-                #   check lines length equals
-                for l in elems:
-                    if len(l) != len(elems[0]):
-                        return None
-
-                return np.array(elems, dtype='O')
-        except Exception as e:
-            print(e)
+        if path.strip() == "":
             return None
+
+        if not os.path.exists(path):
+            print(f"File '{path}' not found")
+            return None
+
+        if not os.path.isfile(path):
+            print(f"'{path}' is not a file")
+            return None
+
+        ext = os.path.splitext(path)[1]
+
+        if ext not in (".brd", ".fen"):
+            print(f"Unsupported extension '{ext}'")
+            return None
+
+        with open(path, "r") as f:
+            data = f.read()
+
+        if ext == ".brd":
+            lines = data.split("\n")
+            rows = [
+                line.replace('--', '').strip().split(",")
+                for line in lines[1:]
+            ]
+            rows = list(filter(lambda r: len(r) != 0, rows))
+            if len(rows) == 0:
+                print("Board must have at least one row")
+                return None
+
+            width = len(rows[0])
+
+            #   check lines length equals
+            for row in rows:
+                if len(row) != width:
+                    print("All rows must have the same width")
+                    return None
+
+            self.player_order = lines[0]
+            return np.array(rows, dtype='O')
+
+        elif ext == ".fen":
+            parts = data.strip().split(" ")
+            if len(parts) == 0:
+                print("FEN must at least contain the board state")
+                return None
+
+            board_desc = parts[0]
+            rows_desc = board_desc.split("/")
+            if len(rows_desc) == 0:
+                print("Board must have at least one row")
+                return None
+
+            rows = []
+
+            # Match before a letter or between a letter and a digit, or at the start/end of the string
+            # (allows for bigger board with spaces >= 10)
+            regexp = r"^|(?=\D)|(?<=\D)(?=\d)|$"
+            for row_desc in rows_desc:
+                matches = list(re.finditer(regexp, row_desc))
+                row = []
+                for i in range(len(matches) - 1):
+                    m1 = matches[i]
+                    m2 = matches[i + 1]
+                    part = row_desc[m1.start():m2.start()]
+                    if part.isnumeric():
+                        row += [""] * int(part)
+                    else:
+                        color = "w" if part.isupper() else "b"
+                        piece = part.lower()
+                        if piece not in ("p", "r", "n", "b", "k", "q"):
+                            print(f"Invalid piece '{part}'")
+                            return None
+                        row.append(piece + color)
+                rows.append(row)
+
+            width = len(rows[0])
+            #   check lines length equals
+            for row in rows:
+                if len(row) != width:
+                    print("All rows must have the same width")
+                    return None
+
+            next_player = parts[1] if len(parts) > 1 else "w"
+            if next_player not in ("w", "b"):
+                print(f"Invalid player '{next_player}'")
+                return None
+
+            self.player_order = "0w01b2" if next_player == "w" else "0b01w2"
+            board = np.array(rows, dtype='O')
+            if next_player == "w":
+                board = np.rot90(board, 2)
+            return board
 
         return None
 
