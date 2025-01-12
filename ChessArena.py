@@ -1,4 +1,4 @@
-
+import os.path
 
 from PyQt6 import QtCore, QtWidgets, QtGui
 from PyQt6 import uic
@@ -30,6 +30,9 @@ CHESS_COLOR = {"w" : [QtGui.QColor(255,255,255), QtGui.QColor(0,0,0)], "b" : [Qt
 COLOR_NAMES = {"w" : "White", "b":"Black", "r":"Red", "y":"Yellow"}
 CHESS_PIECES_NAMES = {"k":"King", "q":"Queen", "n":"Knight", "b":"Bishop", "r":"Rook", "p":"Pawn"}
 class ChessArena(QtWidgets.QWidget):
+    PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
+    BOARDS_DIR = os.path.join(PROJECT_DIR, "Data", "maps")
+
     def __init__(self):
         super().__init__()
 
@@ -152,7 +155,7 @@ class ChessArena(QtWidgets.QWidget):
             self.add_system_message("# " + str(COLOR_NAMES[winner]) + " won the match")
 
     def select_and_load_board(self):
-        path = QtWidgets.QFileDialog.getOpenFileName(self, "Select board", "C:\\Users\\Louis\\Desktop\\ISChess\\Data\\maps", "Board File (*.brd)")
+        path = QtWidgets.QFileDialog.getOpenFileName(self, "Select board", self.BOARDS_DIR, "Board File (*.brd)")
 
         if path is None:
             return
