@@ -354,3 +354,30 @@ class ChessArena(QtWidgets.QWidget):
         self.setup_board()
         self.setup_players()
         self.chess_scene.update()
+
+    def get_board_fen(self):
+        fen = ""
+        rows = []
+        for y in range(self.board.shape[0]):
+            row = ""
+            count = 0
+            for x in range(self.board.shape[1]):
+                piece = self.board[y, x]
+                if piece == "":
+                    count += 1
+                else:
+                    if count != 0:
+                        row += str(count)
+                        count = 0
+                    type_, col = piece
+                    if col == "w":
+                        type_ = type_.upper()
+                    row += type_
+            if count != 0:
+                row += str(count)
+            rows.append(row)
+
+        fen += "/".join(rows)
+        fen += " " + self.player_order[1]
+        fen += " - - 0 1"
+        return fen
