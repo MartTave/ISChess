@@ -16,11 +16,13 @@ from Bots import *
 
 import numpy as np
 
+from PieceManager import PieceManager
+
+
 #   Wrap up for QApplication
 class ChessApp(QtWidgets.QApplication):
     def __init__(self):
         super().__init__([])
-
 
     def start(self):
         arena = ChessArena()
@@ -30,12 +32,6 @@ class ChessApp(QtWidgets.QApplication):
         self.exec()
 
 #   Main window to handle the chess board
-CHESS_PIECES = ["k", "q", "n", "b", "r", "p"]
-CHESS_COLOR = {"w" : [QtGui.QColor(255,255,255), QtGui.QColor(0,0,0)], "b" : [QtGui.QColor(0,0,0), QtGui.QColor(255,255,255)],
-               "r" : [QtGui.QColor(200,0,0), QtGui.QColor(50,255,255)], "y" : [QtGui.QColor(200,200,0), QtGui.QColor(50,50,255)]}
-COLOR_NAMES = {"w" : "White", "b":"Black", "r":"Red", "y":"Yellow"}
-CHESS_PIECES_NAMES = {"k":"King", "q":"Queen", "n":"Knight", "b":"Bishop", "r":"Rook", "p":"Pawn"}
-
 class ChessArena(Ui_MainWindow, QWidget):
     PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
     BOARDS_DIR = os.path.join(PROJECT_DIR, "Data", "maps")
@@ -88,10 +84,10 @@ class ChessArena(Ui_MainWindow, QWidget):
 
         self.auto_playing = not self.auto_playing
 
-    #   Called to start the bot simulation
+    # Called to start the bot simulation
     def launch_game(self):
         self.add_system_message("# Starting new Game #")
-        #   Prepare AIs
+        # Prepare AIs
         self.players_AI = {}
         for cid, color in enumerate(self.players_AI_choice):
             self.players_AI[color] = CHESS_BOT_LIST[self.players_AI_choice[color].currentText()]
@@ -113,7 +109,7 @@ class ChessArena(Ui_MainWindow, QWidget):
 
         next_player_color = self.player_order[0:3]
 
-        #   Prepare board view
+        # Prepare board view
         rotated_view_board = np.rot90(self.board, int(next_player_color[2]))
         self.current_player = ParallelTurn(self.players_AI[next_player_color[1]], self.player_order, rotated_view_board, self.max_time_budget)
         self.current_player.setTerminationEnabled(True)
@@ -200,12 +196,7 @@ class ChessArena(Ui_MainWindow, QWidget):
     def load_assets(self):
         self.white_square = QtGui.QPixmap("Data/assets/light_square.png")
         self.black_square = QtGui.QPixmap("Data/assets/dark_square.png")
-
-        self.pieces_imgs = {}
-
-        for p in CHESS_PIECES:
-            image = QtGui.QImage("Data/assets/" + p + ".png")
-            self.pieces_imgs[p] = image
+        PieceManager.load_assets()
 
     def setup_players(self):
         for i in reversed(range(self.playersList.count())):
@@ -233,46 +224,28 @@ class ChessArena(Ui_MainWindow, QWidget):
         if os.pardir in path:
             path = self.board_manager.path
         self.currentBoardValue.setText(path)
-        return
-        for i in reversed(self.chess_scene.items()):
-            self.chess_scene.removeItem((i))
 
-        #   Maintain the pointer towards the items on the board
-        self.piece_items = np.array([[None] * self.board.shape[1]]*self.board.shape[0], dtype=object)
-        #   Maintain list of colored pixmap
-        self.colored_piece_pixmaps = {}
+        self.chess_scene.clear()
 
-        for y in range(self.board.shape[1]):
-            for x in range(self.board.shape[0]):
+        board = self.board_manager.board
+        height, width = board.shape
 
+        for y in range(height):
+            for x in range(width):
+                # Draw board square
                 square_color = self.white_square if (x+y) % 2 == 0 else self.black_square
                 square_item = self.chess_scene.addPixmap(square_color)
-                square_item.setPos(QtCore.QPointF(square_color.size().width()*y,square_color.size().height()*x))
+                square_item.setPos(QtCore.QPointF(square_color.size().width() * x, square_color.size().height() * y))
 
-                if self.board[x,y] != '' and self.board[x,y] != 'XX':
-                    player_piece = self.board[x,y][0]
-                    player_color = self.board[x,y][1]
+                # If tile is empty, continue
+                if board[y, x] in ("", "XX"):
+                    continue
 
-                    if player_color not in self.colored_piece_pixmaps:
-                        self.colored_piece_pixmaps[player_color] = {}
+                player_piece = board[y, x][0]
+                player_color = board[y, x][1]
 
-                    if player_piece not in self.colored_piece_pixmaps[player_color]:
-                        piece_img = self.pieces_imgs[player_piece]
-                        copy = piece_img.copy()
-
-                        def mix(Q1, Q2, f, a):
-                            return QtGui.QColor(int(Q1.red()   * f + Q2.red()   * (1-f)),
-                                                int(Q1.green() * f + Q2.green() * (1-f)),
-                                                int(Q1.blue()  * f + Q2.blue()  * (1-f)), a)
-
-                        for px in range(copy.size().width()):
-                            for py in range(copy.size().height()):
-                                copy.setPixelColor(px, py, mix(CHESS_COLOR[player_color][0], CHESS_COLOR[player_color][1], copy.pixelColor(px, py).red() / 255., copy.pixelColor(px, py).alpha()))
-
-                        self.colored_piece_pixmaps[player_color][player_piece] = QtGui.QPixmap().fromImage(copy)
-
-                    self.piece_items[x,y] = self.chess_scene.addPixmap(self.colored_piece_pixmaps[player_color][player_piece])
-                    self.piece_items[x,y].setPos(QtCore.QPointF(square_color.size().width()*y,square_color.size().height()*x))
+                img = self.chess_scene.addPixmap(PieceManager.get_piece_img(player_color, player_piece))
+                img.setPos(QtCore.QPointF(square_color.size().width() * x, square_color.size().height() * y))
 
         self.chessboardView.fitInView(self.chess_scene.sceneRect())
 
