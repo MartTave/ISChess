@@ -1,11 +1,16 @@
 import os.path
 import re
+from typing import Optional, Dict
 
 from PyQt6 import QtCore, QtWidgets, QtGui
 from PyQt6 import uic
+from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtWidgets import QWidget, QApplication
 
+from BoardManager import BoardManager
 from Bots.ChessBotList import *
 from ChessRules import *
+from Data.UI import Ui_MainWindow
 from ParallelPlayer import *
 from Bots import *
 
@@ -25,41 +30,63 @@ class ChessApp(QtWidgets.QApplication):
         self.exec()
 
 #   Main window to handle the chess board
-CHESS_PIECES = ["k",  "q", "n", "b", "r", "p"]
+CHESS_PIECES = ["k", "q", "n", "b", "r", "p"]
 CHESS_COLOR = {"w" : [QtGui.QColor(255,255,255), QtGui.QColor(0,0,0)], "b" : [QtGui.QColor(0,0,0), QtGui.QColor(255,255,255)],
                "r" : [QtGui.QColor(200,0,0), QtGui.QColor(50,255,255)], "y" : [QtGui.QColor(200,200,0), QtGui.QColor(50,50,255)]}
 COLOR_NAMES = {"w" : "White", "b":"Black", "r":"Red", "y":"Yellow"}
 CHESS_PIECES_NAMES = {"k":"King", "q":"Queen", "n":"Knight", "b":"Bishop", "r":"Rook", "p":"Pawn"}
-class ChessArena(QtWidgets.QWidget):
+
+class ChessArena(Ui_MainWindow, QWidget):
     PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
     BOARDS_DIR = os.path.join(PROJECT_DIR, "Data", "maps")
+    START_ICON = QtGui.QIcon.fromTheme("media-playback-start")
+    STOP_ICON = QtGui.QIcon.fromTheme("media-playback-stop")
 
     def __init__(self):
         super().__init__()
 
         uic.loadUi("Data/UI.ui", self)
 
-        #   Render for chess board
+        # Render for chess board
         self.chess_scene = QtWidgets.QGraphicsScene()
-        self.chess_scene.setBackgroundBrush(QtGui.QBrush(QtGui.QColor("white")))
-        #self.chess_scene.setBackgroundBrush(QBrush(Qt6.lightGray))
         self.chessboardView.setScene(self.chess_scene)
 
-        self.loadBoardButton.clicked.connect(self.select_and_load_board)
-
-        self.launchGameButton.clicked.connect(self.launch_game)
-
+        # Assets
+        self.white_square: Optional[QPixmap] = None
+        self.black_square: Optional[QPixmap] = None
+        self.pieces_imgs: Dict[str, QImage] = {}
         self.load_assets()
 
+        # Variables
+        self.board_manager: BoardManager = BoardManager()
         self.current_player = None
+        self.players_AI = {}
+        self.nbr_turn_to_play = 0
+        self.auto_playing = False
+
+        # Board actions
+        self.loadBoard.clicked.connect(self.select_and_load_board)
+        self.reloadBoard.clicked.connect(self.board_manager.reload)
+        self.copyBoard.clicked.connect(self.copy_board)
+        self.exportBoard.clicked.connect(self.export_board)
+
+        # Game actions
+        #self.prevMove.clicked.connect(self.prev_move)
+        self.startStop.clicked.connect(self.start_stop)
+        #self.nextMove.clicked.connect(self.next_move)
 
     def add_system_message(self, message):
-        msg_widget = QtWidgets.QLabel(message)
-        msg_widget.setWordWrap(True)
         print("[SYS]", message)
-        self.systemMessagesLayout.addWidget(msg_widget)
-        self.systemMessagesBox = QtWidgets.QScrollArea()
-        self.systemMessagesBox.verticalScrollBar().setSliderPosition(self.systemMessagesBox.verticalScrollBar().maximum())
+
+    def start_stop(self):
+        if self.auto_playing:
+            self.startStop.setIcon(self.START_ICON)
+            print("Stopping")
+        else:
+            self.startStop.setIcon(self.STOP_ICON)
+            print("Starting")
+
+        self.auto_playing = not self.auto_playing
 
     #   Called to start the bot simulation
     def launch_game(self):
@@ -70,8 +97,7 @@ class ChessArena(QtWidgets.QWidget):
             self.players_AI[color] = CHESS_BOT_LIST[self.players_AI_choice[color].currentText()]
             self.add_system_message("AI #" + str(cid) + " = " + str(self.players_AI[color].__name__))
 
-        self.nbr_turn_to_play = int(self.maxTurnBudget.text())
-        self.max_time_budget = float(self.timeBudgetInput.text())
+        self.nbr_turn_to_play = self.autoMovesCount.value()
 
         self.play_next_turn()
 
@@ -167,112 +193,9 @@ class ChessArena(QtWidgets.QWidget):
             return
         path = path[0]
 
-        board = self.load_board(path)
-        if board is None:
-            return
-
-        self.board = board
-
-        self.setup_board()
-        self.setup_players()
-
-    def load_board(self, path):
-        if path.strip() == "":
-            return None
-
-        if not os.path.exists(path):
-            print(f"File '{path}' not found")
-            return None
-
-        if not os.path.isfile(path):
-            print(f"'{path}' is not a file")
-            return None
-
-        ext = os.path.splitext(path)[1]
-
-        if ext not in (".brd", ".fen"):
-            print(f"Unsupported extension '{ext}'")
-            return None
-
-        with open(path, "r") as f:
-            data = f.read()
-
-        if ext == ".brd":
-            lines = data.split("\n")
-            rows = [
-                line.replace('--', '').strip().split(",")
-                for line in lines[1:]
-            ]
-            rows = list(filter(lambda r: len(r) != 0, rows))
-            if len(rows) == 0:
-                print("Board must have at least one row")
-                return None
-
-            width = len(rows[0])
-
-            #   check lines length equals
-            for row in rows:
-                if len(row) != width:
-                    print("All rows must have the same width")
-                    return None
-
-            self.player_order = lines[0]
-            return np.array(rows, dtype='O')
-
-        elif ext == ".fen":
-            parts = data.strip().split(" ")
-            if len(parts) == 0:
-                print("FEN must at least contain the board state")
-                return None
-
-            board_desc = parts[0]
-            rows_desc = board_desc.split("/")
-            if len(rows_desc) == 0:
-                print("Board must have at least one row")
-                return None
-
-            rows = []
-
-            # Match before a letter or between a letter and a digit, or at the start/end of the string
-            # (allows for bigger board with spaces >= 10)
-            regexp = r"^|(?=\D)|(?<=\D)(?=\d)|$"
-            for row_desc in rows_desc:
-                matches = list(re.finditer(regexp, row_desc))
-                row = []
-                for i in range(len(matches) - 1):
-                    m1 = matches[i]
-                    m2 = matches[i + 1]
-                    part = row_desc[m1.start():m2.start()]
-                    if part.isnumeric():
-                        row += [""] * int(part)
-                    else:
-                        color = "w" if part.isupper() else "b"
-                        piece = part.lower()
-                        if piece not in ("p", "r", "n", "b", "k", "q"):
-                            print(f"Invalid piece '{part}'")
-                            return None
-                        row.append(piece + color)
-                rows.append(row)
-
-            width = len(rows[0])
-            #   check lines length equals
-            for row in rows:
-                if len(row) != width:
-                    print("All rows must have the same width")
-                    return None
-
-            next_player = parts[1] if len(parts) > 1 else "w"
-            if next_player not in ("w", "b"):
-                print(f"Invalid player '{next_player}'")
-                return None
-
-            self.player_order = "0w01b2" if next_player == "w" else "0b01w2"
-            board = np.array(rows, dtype='O')
-            if next_player == "w":
-                board = np.rot90(board, 2)
-            return board
-
-        return None
+        if self.board_manager.load_file(path):
+            self.setup_board()
+            self.setup_players()
 
     def load_assets(self):
         self.white_square = QtGui.QPixmap("Data/assets/light_square.png")
@@ -306,7 +229,11 @@ class ChessArena(QtWidgets.QWidget):
         self.playersList.addItem(QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding))
 
     def setup_board(self):
-
+        path: str = os.path.relpath(self.board_manager.path, self.BOARDS_DIR)
+        if os.pardir in path:
+            path = self.board_manager.path
+        self.currentBoardValue.setText(path)
+        return
         for i in reversed(self.chess_scene.items()):
             self.chess_scene.removeItem((i))
 
@@ -350,34 +277,21 @@ class ChessArena(QtWidgets.QWidget):
         self.chessboardView.fitInView(self.chess_scene.sceneRect())
 
     def start(self):
-        self.board = self.load_board("Data/maps/default.brd")
         self.setup_board()
-        self.setup_players()
+        #self.setup_players()
         self.chess_scene.update()
 
-    def get_board_fen(self):
-        fen = ""
-        rows = []
-        for y in range(self.board.shape[0]):
-            row = ""
-            count = 0
-            for x in range(self.board.shape[1]):
-                piece = self.board[y, x]
-                if piece == "":
-                    count += 1
-                else:
-                    if count != 0:
-                        row += str(count)
-                        count = 0
-                    type_, col = piece
-                    if col == "w":
-                        type_ = type_.upper()
-                    row += type_
-            if count != 0:
-                row += str(count)
-            rows.append(row)
+    def copy_board(self):
+        fen: str = self.board_manager.get_fen()
+        QApplication.clipboard().setText(fen)
 
-        fen += "/".join(rows)
-        fen += " " + self.player_order[1]
-        fen += " - - 0 1"
-        return fen
+    def export_board(self):
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save board as ...",
+            self.BOARDS_DIR,
+            "Board File (*.brd *.fen)"
+        )
+        if path == "":
+            return
+        self.board_manager.save(path)
