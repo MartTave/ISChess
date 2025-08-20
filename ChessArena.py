@@ -67,8 +67,6 @@ class ChessArena(Ui_MainWindow, QWidget):
         self.startStop.clicked.connect(self.game_manager.start_stop)
         self.nextMove.clicked.connect(self.game_manager.redo_move)
 
-        self.movesList.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-
         self.chessboardView.resizeEvent = self.update_chessboard
 
     def update_chessboard(self, *args, **kwargs):

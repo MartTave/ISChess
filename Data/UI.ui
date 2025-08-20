@@ -175,7 +175,8 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset theme="edit-undo"/>
+             <iconset theme="edit-undo">
+              <normaloff>.</normaloff>.</iconset>
             </property>
            </widget>
           </item>
@@ -196,7 +197,8 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset theme="edit-redo"/>
+             <iconset theme="edit-redo">
+              <normaloff>.</normaloff>.</iconset>
             </property>
            </widget>
           </item>
@@ -231,6 +233,9 @@
         </item>
         <item>
          <widget class="QTableWidget" name="movesList">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
           <property name="sizePolicy">
            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
             <horstretch>0</horstretch>
@@ -242,6 +247,9 @@
             <width>0</width>
             <height>64</height>
            </size>
+          </property>
+          <property name="editTriggers">
+           <set>QAbstractItemView::NoEditTriggers</set>
           </property>
           <property name="showGrid">
            <bool>true</bool>
