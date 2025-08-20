@@ -211,11 +211,11 @@ class GameManager:
 
     def undo_move(self):
         """Undo the last move, if any"""
-        print("Undoing")
+        self.arena.show_message("This feature has not been implemented yet")
 
     def redo_move(self):
         """Redo the next move, if any"""
-        print("Redoing")
+        self.arena.show_message("This feature has not been implemented yet")
 
     def apply_move(self) -> bool:
         """
