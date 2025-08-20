@@ -5,7 +5,7 @@ from PyQt6 import QtWidgets, QtGui
 from PyQt6 import uic
 from PyQt6.QtCore import QTimer, QRectF
 from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QWidget, QApplication, QFrame, QMessageBox, QTableWidgetItem
+from PyQt6.QtWidgets import QWidget, QApplication, QFrame, QMessageBox, QTableWidgetItem, QAbstractItemView
 
 from BoardManager import BoardManager
 from BotWidget import BotWidget
@@ -66,6 +66,8 @@ class ChessArena(Ui_MainWindow, QWidget):
         self.prevMove.clicked.connect(self.game_manager.undo_move)
         self.startStop.clicked.connect(self.game_manager.start_stop)
         self.nextMove.clicked.connect(self.game_manager.redo_move)
+
+        self.movesList.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
         self.chessboardView.resizeEvent = self.update_chessboard
 
