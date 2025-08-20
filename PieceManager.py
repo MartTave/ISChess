@@ -75,3 +75,10 @@ class PieceManager:
                     )
             cache[color][piece] = QtGui.QPixmap().fromImage(copy)
         return cache[color][piece]
+
+    @staticmethod
+    def get_piece_name(piece_and_col: str):
+        piece, color = piece_and_col
+        piece_name = PieceManager.PIECE_NAMES[piece]
+        color_name = PieceManager.COLOR_NAMES[color]
+        return f"{color_name} {piece_name}"

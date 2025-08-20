@@ -1,16 +1,14 @@
-
-
-from PyQt6 import QtCore
 import numpy as np
+from PyQt6 import QtCore
 
-#
-#   Thread wrapper
-#
+
 class ParallelTurn(QtCore.QThread):
-    def __init__(self, AI, player_sequence, board, time_budget):
+    """ Thread wrapper """
+
+    def __init__(self, ai_func, player_sequence, board, time_budget):
         super().__init__()
 
-        self.AI = AI
+        self.ai_func = ai_func
         self.board = board
         self.player_sequence = player_sequence
         self.time_budget = time_budget
@@ -22,4 +20,4 @@ class ParallelTurn(QtCore.QThread):
         self.next_move = ((0,0), (0,0))
 
     def run(self):
-        self.next_move = self.AI(self.player_sequence, np.copy(self.board), self.time_budget)
+        self.next_move = self.ai_func(self.player_sequence, np.copy(self.board), self.time_budget)
