@@ -130,6 +130,9 @@ class GameManager:
 
         self.apply_move()
 
+        if self.check_game_end():
+            return True
+
         self.current_player = None
         self.turn += 1
         self.turn %= len(self.players)
@@ -232,7 +235,19 @@ class GameManager:
         col2 = "ABCDEFGH"[7 - end[1]]
         row1 = start[0] + 1
         row2 = end[0] + 1
-        self.arena.push_move_to_history(f"{col1}{row1} -> {col2}{row2}", f"Player {color_name}")
+        self.arena.push_move_to_history(f"{col1}{row1} -> {col2}{row2}", color_name)
 
-        # TODO: check all other defeated
         return True
+
+    def check_game_end(self):
+        board = self.current_player.board
+        current_color = self.current_player.color
+        for y in range(board.shape[0]):
+            for x in range(board.shape[1]):
+                piece = board[y, x]
+                if piece and piece[0] == "k" and piece[1] != current_color:
+                    return
+
+        color_name: str = PieceManager.COLOR_NAMES[current_color]
+        self.arena.show_message(f"{color_name} player won the match", "End of game")
+        self.stop()

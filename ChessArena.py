@@ -5,7 +5,7 @@ from PyQt6 import QtWidgets, QtGui
 from PyQt6 import uic
 from PyQt6.QtCore import QTimer, QRectF
 from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QWidget, QApplication, QFrame, QMessageBox, QTableWidgetItem, QAbstractItemView
+from PyQt6.QtWidgets import QWidget, QApplication, QFrame, QMessageBox, QTableWidgetItem
 
 from BoardManager import BoardManager
 from BotWidget import BotWidget
@@ -85,15 +85,6 @@ class ChessArena(Ui_MainWindow, QWidget):
         rect = QRectF(0, 0, w, h)
         view.setSceneRect(QRectF((board_w - w) / 2, (board_h - h) / 2, w, h))
         view.fitInView(rect)
-
-    def add_system_message(self, message):
-        print("[SYS]", message)
-
-    def end_game(self, winner):
-        if winner is None:
-            self.add_system_message("# Match ended in a draw")
-        else:
-            self.add_system_message("# " + str(COLOR_NAMES[winner]) + " won the match")
 
     def select_and_load_board(self):
         """Open board file selector and load the selected file"""
