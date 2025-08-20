@@ -13,7 +13,18 @@ class BoardManager:
         self.board: np.array = np.array([], dtype='O')
         self.path: Optional[str] = None
         self.player_order: str = "0w01b2"
+        self.available_colors: list[str] = []
         self.load_file(self.DEFAULT_BOARD)
+
+    def post_load(self):
+        self.available_colors = []
+        for y in range(self.board.shape[0]):
+            for x in range(self.board.shape[1]):
+                if self.board[y, x] in ("", "XX"):
+                    continue
+                piece, color = self.board[y, x]
+                if color not in self.available_colors:
+                    self.available_colors.append(color)
 
     def load_file(self, path: str) -> bool:
         if path.strip() == "":
@@ -58,6 +69,7 @@ class BoardManager:
             self.player_order = lines[0]
             self.board = np.array(rows, dtype='O')
             self.path = path
+            self.post_load()
             return True
 
         elif ext == ".fen":
@@ -113,6 +125,7 @@ class BoardManager:
                 board = np.rot90(board, 2)
             self.board = board
             self.path = path
+            self.post_load()
             return True
         return False
 
