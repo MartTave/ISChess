@@ -5,7 +5,7 @@ from PyQt6 import QtWidgets, QtGui
 from PyQt6 import uic
 from PyQt6.QtCore import QTimer, QRectF
 from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QWidget, QApplication, QFrame, QMessageBox, QTableWidgetItem
+from PyQt6.QtWidgets import QApplication, QFrame, QMessageBox, QTableWidgetItem, QMainWindow
 
 from BoardManager import BoardManager
 from BotWidget import BotWidget
@@ -30,7 +30,7 @@ class ChessApp(QtWidgets.QApplication):
         self.exec()
 
 #   Main window to handle the chess board
-class ChessArena(Ui_MainWindow, QWidget):
+class ChessArena(Ui_MainWindow, QMainWindow):
     PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
     BOARDS_DIR = os.path.join(PROJECT_DIR, "Data", "maps")
     START_ICON = QtGui.QIcon.fromTheme("media-playback-start")
@@ -56,15 +56,15 @@ class ChessArena(Ui_MainWindow, QWidget):
         self.board_manager: BoardManager = self.game_manager.board_manager
 
         # Board actions
-        self.loadBoard.clicked.connect(self.select_and_load_board)
-        self.reloadBoard.clicked.connect(self.reload_board)
-        self.copyBoard.clicked.connect(self.copy_board)
-        self.exportBoard.clicked.connect(self.export_board)
+        self.actionLoad.triggered.connect(self.select_and_load_board)
+        self.actionReload.triggered.connect(self.reload_board)
+        self.actionCopy.triggered.connect(self.copy_board)
+        self.actionExport.triggered.connect(self.export_board)
 
         # Game actions
-        self.prevMove.clicked.connect(self.game_manager.undo_move)
-        self.startStop.clicked.connect(self.game_manager.start_stop)
-        self.nextMove.clicked.connect(self.game_manager.redo_move)
+        self.actionUndo.triggered.connect(self.game_manager.undo_move)
+        self.actionStart.triggered.connect(self.game_manager.start_stop)
+        self.actionRedo.triggered.connect(self.game_manager.redo_move)
 
         self.movesList.resizeColumnsToContents()
 
@@ -102,6 +102,7 @@ class ChessArena(Ui_MainWindow, QWidget):
         if self.board_manager.load_file(path):
             self.setup_board()
             self.setup_players()
+            self.show_status("Board loaded")
 
     def load_assets(self):
         """Load board and piece images"""
@@ -177,6 +178,7 @@ class ChessArena(Ui_MainWindow, QWidget):
         """Copy the current board position as FEN in the clipboard"""
         fen: str = self.board_manager.get_fen()
         QApplication.clipboard().setText(fen)
+        self.show_status("Copied board FEN to clipboard")
 
     def export_board(self):
         """Open the export file selector and save the board"""
@@ -189,11 +191,13 @@ class ChessArena(Ui_MainWindow, QWidget):
         if path == "":
             return
         self.board_manager.save(path)
+        self.show_status("Board exported")
 
     def reload_board(self):
         """Reload the board"""
         self.board_manager.reload()
         self.setup_board()
+        self.show_status("Board reloaded")
 
     def show_message(self, message: str, title: str = "Message"):
         """
@@ -205,6 +209,14 @@ class ChessArena(Ui_MainWindow, QWidget):
         msgbox.setWindowTitle(title)
         msgbox.setText(message)
         msgbox.open()
+
+    def show_status(self, message: str, duration: int = 3000):
+        """
+        Show a message in the status bar
+        :param message: The message to display
+        :param duration: The duration of the message in milliseconds
+        """
+        self.statusbar.showMessage(message, duration)
 
     def push_move_to_history(self, move: str, player: str):
         """
