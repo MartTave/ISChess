@@ -4,6 +4,7 @@ from typing import Optional, TYPE_CHECKING
 
 import numpy as np
 from PyQt6.QtCore import QTimer
+from PyQt6.QtGui import QIcon
 
 from BoardManager import BoardManager
 from BotWidget import BotWidget
@@ -71,6 +72,8 @@ class GameManager:
         if self.current_player is not None:
             print("Cannot launch new turn while already processing")
             return False
+
+        self.update_start_button(playing=True)
 
         board = self.board_manager.board
         player: Player = self.players[self.turn]
@@ -157,7 +160,7 @@ class GameManager:
             self.arena.show_message(f"Cannot start auto-playing, number of moves is {self.nbr_turn_to_play}, must be >0")
             return False
 
-        self.arena.startStop.setIcon(self.arena.STOP_ICON)
+        self.update_start_button(playing=True)
         if self.auto_playing:
             print("Already auto-playing")
             return False
@@ -172,11 +175,26 @@ class GameManager:
 
         This does not immediately end the running turn but lets it complete gracefully
         """
-        self.arena.startStop.setIcon(self.arena.START_ICON)
+        self.update_start_button(playing=False)
         if not self.auto_playing:
             print("Already stopped")
             return
         self.auto_playing = False
+
+    def update_start_button(self, playing: bool):
+        """
+        Update the start/stop button
+
+        If ``playing`` is ``True``, the button will also display the remaining number of turns
+        :param playing: If ``True`` the button uses the "stop" icon. If ``False``, it uses the "start" icon
+        """
+        icon: QIcon = self.arena.STOP_ICON if playing else self.arena.START_ICON
+        self.arena.startStop.setIcon(icon)
+
+        if playing and self.auto_playing:
+            self.arena.startStop.setText(f"{self.nbr_turn_to_play} move(s) left")
+        else:
+            self.arena.startStop.setText(None)
 
     def start_stop(self):
         """
