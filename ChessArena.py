@@ -5,13 +5,14 @@ from PyQt6 import QtWidgets, QtGui
 from PyQt6 import uic
 from PyQt6.QtCore import QTimer, QRectF
 from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QWidget, QApplication, QFrame
+from PyQt6.QtWidgets import QWidget, QApplication, QFrame, QMessageBox, QTableWidgetItem
 
 from BoardManager import BoardManager
 from BotWidget import BotWidget
 from Bots.ChessBotList import *
 from ChessRules import *
 from Data.UI import Ui_MainWindow
+from GameManager import GameManager
 from ParallelPlayer import *
 from PieceManager import PieceManager
 
@@ -52,27 +53,25 @@ class ChessArena(Ui_MainWindow, QWidget):
         self.load_assets()
 
         # Variables
-        self.board_manager: BoardManager = BoardManager()
-        self.current_player = None
-        self.players_AI = {}
-        self.available_colors: list[str] = []
-        self.nbr_turn_to_play = 0
-        self.auto_playing = False
+        self.game_manager: GameManager = GameManager(self)
+        self.board_manager: BoardManager = self.game_manager.board_manager
 
         # Board actions
         self.loadBoard.clicked.connect(self.select_and_load_board)
-        self.reloadBoard.clicked.connect(self.board_manager.reload)
+        self.reloadBoard.clicked.connect(self.reload_board)
         self.copyBoard.clicked.connect(self.copy_board)
         self.exportBoard.clicked.connect(self.export_board)
 
         # Game actions
-        #self.prevMove.clicked.connect(self.prev_move)
-        self.startStop.clicked.connect(self.start_stop)
-        #self.nextMove.clicked.connect(self.next_move)
+        self.prevMove.clicked.connect(self.game_manager.undo_move)
+        self.startStop.clicked.connect(self.game_manager.start_stop)
+        self.nextMove.clicked.connect(self.game_manager.redo_move)
 
-        self.chessboardView.resizeEvent = self.updateChessboard
+        self.chessboardView.resizeEvent = self.update_chessboard
 
-    def updateChessboard(self, *args, **kwargs):
+    def update_chessboard(self, *args, **kwargs):
+        """ Update chessboard to fit in view """
+
         view = self.chessboardView
         shape = self.board_manager.board.shape
         board_w = shape[1] * self.black_square.size().width()
@@ -88,16 +87,6 @@ class ChessArena(Ui_MainWindow, QWidget):
 
     def add_system_message(self, message):
         print("[SYS]", message)
-
-    def start_stop(self):
-        if self.auto_playing:
-            self.startStop.setIcon(self.START_ICON)
-            print("Stopping")
-        else:
-            self.startStop.setIcon(self.STOP_ICON)
-            print("Starting")
-
-        self.auto_playing = not self.auto_playing
 
     # Called to start the bot simulation
     def launch_game(self):
@@ -224,7 +213,6 @@ class ChessArena(Ui_MainWindow, QWidget):
         board = self.board_manager.board
         height, width = board.shape
 
-        self.available_colors = []
         for y in range(height):
             for x in range(width):
                 # Draw board square
@@ -236,30 +224,26 @@ class ChessArena(Ui_MainWindow, QWidget):
                 if board[y, x] in ("", "XX"):
                     continue
 
-                player_piece = board[y, x][0]
-                player_color = board[y, x][1]
-                if player_color not in self.available_colors:
-                    self.available_colors.append(player_color)
+                player_piece, player_color = board[y, x]
 
                 img = self.chess_scene.addPixmap(PieceManager.get_piece_img(player_color, player_piece))
                 img.setPos(QtCore.QPointF(square_color.size().width() * x, square_color.size().height() * y))
-        self.updateChessboard()
+        self.update_chessboard()
 
     def setup_players(self):
+        self.game_manager.reset()
         layout = self.botsList.layout()
         for i in reversed(range(layout.count())):
             if layout.itemAt(i).widget() is not None:
                 layout.itemAt(i).widget().setParent(None)
 
-        self.players_AI_choice = {}
-        for i, color in enumerate(self.available_colors):
+        for i, color in enumerate(self.board_manager.available_colors):
             player = BotWidget(color)
 
             bot_selector = player.playerBot
             for name in CHESS_BOT_LIST:
                 bot_selector.addItem(name, CHESS_BOT_LIST[name])
             bot_selector.setCurrentIndex(0)
-            self.players_AI_choice[color] = bot_selector
             if i != 0:
                 sep = QtWidgets.QFrame()
 
@@ -267,6 +251,7 @@ class ChessArena(Ui_MainWindow, QWidget):
                 sep.setFrameShadow(QFrame.Shadow.Sunken)
                 layout.addWidget(sep)
             layout.addWidget(player)
+            self.game_manager.add_player(color, player)
 
         # TODO: Find a better solution
         def resize():
@@ -292,3 +277,20 @@ class ChessArena(Ui_MainWindow, QWidget):
         if path == "":
             return
         self.board_manager.save(path)
+
+    def reload_board(self):
+        self.board_manager.reload()
+        self.setup_board()
+
+    def show_message(self, message: str, title: str = "Message"):
+        msgbox = QMessageBox(self)
+        msgbox.setWindowTitle(title)
+        msgbox.setText(message)
+        msgbox.open()
+
+    def push_move_to_history(self, move: str, player: str):
+        tab = self.movesList
+        tab.insertRow(tab.rowCount())
+        tab.setItem(tab.rowCount() - 1, 0, QTableWidgetItem(str(tab.rowCount())))
+        tab.setItem(tab.rowCount() - 1, 1, QTableWidgetItem(move))
+        tab.setItem(tab.rowCount() - 1, 2, QTableWidgetItem(player))
