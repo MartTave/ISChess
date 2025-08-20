@@ -67,6 +67,8 @@ class ChessArena(Ui_MainWindow, QWidget):
         self.startStop.clicked.connect(self.game_manager.start_stop)
         self.nextMove.clicked.connect(self.game_manager.redo_move)
 
+        self.movesList.resizeColumnsToContents()
+
         self.chessboardView.resizeEvent = self.update_chessboard
 
     def update_chessboard(self, *args, **kwargs):
@@ -294,3 +296,4 @@ class ChessArena(Ui_MainWindow, QWidget):
         tab.setItem(tab.rowCount() - 1, 0, QTableWidgetItem(str(tab.rowCount())))
         tab.setItem(tab.rowCount() - 1, 1, QTableWidgetItem(move))
         tab.setItem(tab.rowCount() - 1, 2, QTableWidgetItem(player))
+        tab.resizeColumnsToContents()
