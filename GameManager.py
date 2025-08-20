@@ -35,14 +35,26 @@ class GameManager:
         self.min_wait.timeout.connect(self.end_if_finished)
 
     def reset(self):
+        """Reset the game"""
         self.players = []
         self.turn = 0
 
     def add_player(self, color: str, widget: BotWidget):
+        """
+        Add a player to the game
+        :param color: The player's color
+        :param widget: The bot widget
+        """
         player = Player(color, widget)
         self.players.append(player)
 
     def get_sequence(self, full: bool = False) -> str:
+        """
+        Get the player sequence
+        :param full: If `True`, the full sequence is returned.
+                     If `False`, only the part related to the current player is returned
+        :return: The player sequence
+        """
         if full:
             start = self.board_manager.player_order[:3*self.turn]
             end = self.board_manager.player_order[3*self.turn:]
@@ -50,6 +62,12 @@ class GameManager:
         return self.board_manager.player_order[self.turn * 3:self.turn * 3 + 3]
 
     def next(self) -> bool:
+        """
+        Start a new turn
+
+        This function calls the next player's bot function with the appropriate arguments and starts a timeout timer.
+        :return: `True` if successful, `False` if a turn is already in progress
+        """
         if self.current_player is not None:
             print("Cannot launch new turn while already processing")
             return False
@@ -82,13 +100,24 @@ class GameManager:
         return True
 
     def on_player_finished(self):
+        """Callback called by the player when it has finished playing"""
         self.player_finished = True
 
     def end_if_finished(self):
+        """Callback called after a minimum waiting time to end the turn if the player has already finished playing"""
         if self.player_finished:
             self.end_turn()
 
     def end_turn(self, forced: bool = False) -> bool:
+        """
+        End the current turn
+
+        If this function is called to prematurely end a player's turn
+        because of a timeout, `forced` should be set to `True`
+        :param forced: If `True`, prints a message telling the user the current player
+                       took too long and was terminated early
+        :return: `True` if successful, `False` if no turn was in progress
+        """
         if self.current_player is None:
             return False
 
@@ -114,7 +143,12 @@ class GameManager:
                 self.next()
         return True
 
-    def start(self):
+    def start(self) -> bool:
+        """
+        Start a series of turns
+
+        :return: `True` if successful, `False` if the number of turns to play is <= 0 or if already autoplaying
+        """
         self.nbr_turn_to_play = self.arena.autoMovesCount.value()
         if self.nbr_turn_to_play <= 0:
             self.arena.show_message(f"Cannot start auto-playing, number of moves is {self.nbr_turn_to_play}, must be >0")
@@ -130,6 +164,11 @@ class GameManager:
         return True
 
     def stop(self):
+        """
+        Stop the game if currently autoplaying
+
+        This does not immediately end the running turn but lets it complete gracefully
+        """
         self.arena.startStop.setIcon(self.arena.START_ICON)
         if not self.auto_playing:
             print("Already stopped")
@@ -137,6 +176,11 @@ class GameManager:
         self.auto_playing = False
 
     def start_stop(self):
+        """
+        Toggle autoplaying
+
+        This function calls either `start` or `stop` depending on the current state
+        """
         if self.auto_playing:
             print("Stopping")
             self.stop()
@@ -145,12 +189,18 @@ class GameManager:
             self.start()
 
     def undo_move(self):
+        """Undo the last move, if any"""
         print("Undoing")
 
     def redo_move(self):
+        """Redo the next move, if any"""
         print("Redoing")
 
     def apply_move(self) -> bool:
+        """
+        Try to apply the move chosen by the current player
+        :return: `True` if successful, `False` if the move is invalid
+        """
         move: tuple[tuple[int, int], tuple[int, int]] = self.current_player.next_move
         start, end = move
         color: str = self.current_player.color
