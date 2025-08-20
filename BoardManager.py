@@ -17,6 +17,11 @@ class BoardManager:
         self.load_file(self.DEFAULT_BOARD)
 
     def post_load(self):
+        """
+        Callback called after loading a board
+
+        Builds a list of available player colors used on the board
+        """
         self.available_colors = []
         for y in range(self.board.shape[0]):
             for x in range(self.board.shape[1]):
@@ -27,6 +32,54 @@ class BoardManager:
                     self.available_colors.append(color)
 
     def load_file(self, path: str) -> bool:
+        """
+        Load a board from a file
+
+        =================
+        Supported formats
+        =================
+
+        ------------------------
+        Board description (.brd)
+        ------------------------
+
+        Starts with the player sequence on a line, then the board layout,
+        one row per line with comma-separated tile descriptions.
+
+        Each tile is described with two characters:
+
+        - The piece type: king (k), queen (q), knight (n), bishop (b), rook (r), pawn (p)
+        - The piece color: white (w), blue (b), red (r), yellow (y)
+
+        If the tile is empty, use ``--``
+
+        *Example*::
+
+            0w01b2
+            rw,nw,bw,kw,qw,bw,nw,rw
+            pw,pw,pw,pw,pw,pw,pw,pw
+            --,--,--,--,--,--,--,--
+            --,--,--,--,--,--,--,--
+            --,--,--,--,--,--,--,--
+            --,--,--,--,--,--,--,--
+            pb,pb,pb,pb,pb,pb,pb,pb
+            rb,nb,bb,kb,qb,bb,nb,rb
+
+        ----------
+        FEN (.fen)
+        ----------
+
+        Only contains a single line describing the board layout in `FEN`_
+
+        *Example*::
+
+            rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+
+        .. _FEN: https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
+
+        :param path: The path to the board file. Can either be a .brd or .fen file
+        :return: ``True`` if successful, `False` otherwise
+        """
         if path.strip() == "":
             return False
 
@@ -130,10 +183,12 @@ class BoardManager:
         return False
 
     def reload(self):
+        """Reload the board from the last imported file, if any"""
         if self.path is not None:
             self.load_file(self.path)
 
     def get_fen(self):
+        """Get the current board position as a FEN string"""
         fen = ""
         rows = []
         for y in range(self.board.shape[0]):
@@ -161,6 +216,11 @@ class BoardManager:
         return fen
 
     def save(self, path: str):
+        """
+        Save the current board position in a file
+
+        :param path: The path where to save the board
+        """
         with open(path, "w") as file:
             file.write(self.player_order)
             for y in range(self.board.shape[0]):

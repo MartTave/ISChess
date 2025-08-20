@@ -51,8 +51,8 @@ class GameManager:
     def get_sequence(self, full: bool = False) -> str:
         """
         Get the player sequence
-        :param full: If `True`, the full sequence is returned.
-                     If `False`, only the part related to the current player is returned
+        :param full: If ``True``, the full sequence is returned.
+                     If ``False``, only the part related to the current player is returned
         :return: The player sequence
         """
         if full:
@@ -66,7 +66,7 @@ class GameManager:
         Start a new turn
 
         This function calls the next player's bot function with the appropriate arguments and starts a timeout timer.
-        :return: `True` if successful, `False` if a turn is already in progress
+        :return: ``True`` if successful, ``False`` if a turn is already in progress
         """
         if self.current_player is not None:
             print("Cannot launch new turn while already processing")
@@ -113,10 +113,10 @@ class GameManager:
         End the current turn
 
         If this function is called to prematurely end a player's turn
-        because of a timeout, `forced` should be set to `True`
-        :param forced: If `True`, prints a message telling the user the current player
+        because of a timeout, ``forced`` should be set to ``True``
+        :param forced: If ``True``, prints a message telling the user the current player
                        took too long and was terminated early
-        :return: `True` if successful, `False` if no turn was in progress
+        :return: ``True`` if successful, ``False`` if no turn was in progress
         """
         if self.current_player is None:
             return False
@@ -147,7 +147,7 @@ class GameManager:
         """
         Start a series of turns
 
-        :return: `True` if successful, `False` if the number of turns to play is <= 0 or if already autoplaying
+        :return: ``True`` if successful, ``False`` if the number of turns to play is <= 0 or if already autoplaying
         """
         self.nbr_turn_to_play = self.arena.autoMovesCount.value()
         if self.nbr_turn_to_play <= 0:
@@ -199,7 +199,7 @@ class GameManager:
     def apply_move(self) -> bool:
         """
         Try to apply the move chosen by the current player
-        :return: `True` if successful, `False` if the move is invalid
+        :return: ``True`` if successful, ``False`` if the move is invalid
         """
         move: tuple[tuple[int, int], tuple[int, int]] = self.current_player.next_move
         start, end = move
