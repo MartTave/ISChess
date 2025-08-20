@@ -13,6 +13,9 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(948, 680)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("Data/assets/icon.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+        MainWindow.setWindowIcon(icon)
         self.horizontalLayout = QtWidgets.QHBoxLayout(MainWindow)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.chessboardView = QtWidgets.QGraphicsView(parent=MainWindow)

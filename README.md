@@ -1,27 +1,36 @@
 
-![p](https://github.com/LouisMLettry/ISChess/assets/114392644/e996f958-ccf3-4e72-ae8d-d2748ab24cae)
-![n](https://github.com/LouisMLettry/ISChess/assets/114392644/25fc2ba7-d69d-4f63-8910-2205226ab65f)
-![b](https://github.com/LouisMLettry/ISChess/assets/114392644/d6a80f82-8b3e-445a-818e-3ecec2d02217)
-![r](https://github.com/LouisMLettry/ISChess/assets/114392644/f765a7ec-44bc-41b6-b2db-a0183ea67c6e)
-![q](https://github.com/LouisMLettry/ISChess/assets/114392644/70e75741-8b8d-43f4-a08f-8ff7326005d4)
-![k](https://github.com/LouisMLettry/ISChess/assets/114392644/1c20c806-fe70-4f7a-be0b-a32725c57400)
+<p align="center"><img src="Data/assets/icon.png" alt="logo" width="96"></p>
+<p align="center">
+<img src="Data/assets/p.png" alt="pawn">
+<img src="Data/assets/n.png" alt="knight">
+<img src="Data/assets/b.png" alt="bishop">
+<img src="Data/assets/r.png" alt="rook">
+<img src="Data/assets/q.png" alt="queen">
+<img src="Data/assets/k.png" alt="king">
+</p>
 
 # ISChess
 This is the repository containing the GUI supporting the ISChess project of the algorithmic lecture.
 
-The project aim is to program a chess playing bot by adding a new file in the *Bots/* folder and registering it to the global bot list as shown in *BaseChessBot.py*. This file will produce your final handout.
-You are more than welcome to modify these files, be careful that the final evaluation will be using the version of the software presented on this repository. If you would like to share modifications to improve the GUI, don't hesitate to submit a change request.
+The project's aim is to program a chess playing bot by adding a new file in the [`Bots/`](Bots) folder and registering it to the global bot list as shown in [`BaseChessBot.py`](Bots/BaseChessBot.py).
+This file will produce your final handout.
+
+You are more than welcome to modify these files.
+However, be careful that the final evaluation will be carried out using the version of the software presented in this repository.
+
+If you would like to share modifications to improve the GUI, don't hesitate to submit a change request.
 
 # Structure
-- *Data/* folder: neutral assets location 
-   - *maps/* folder: examplar boards which can be loaded
-   - *assets/* folder: location of needed images and other assets
-   - ui.ui file: GUI file from QtDesigner
-- *Bots/* folder: contain the global list of bots (*ChessBotList.py*) as well as as an examplar pawn moving bot (*BaseChessBot.py*)
-- main.py: Main execution point
-- ParallelPlayer.py: Threaded wrapper for bot execution
-- ChessRules.py: Basic custom chess rules and verification
-- ChessArena.py: Actual GUI 
+- [`Data/`](Data): neutral assets location 
+   - [`maps/`](Data/maps): example boards which can be loaded
+   - [`assets/`](Data/assets): location of needed images and other assets
+   - [`UI.ui`](Data/UI.ui): GUI file from QtDesigner
+- [`Bots/`](Bots): contains the global list of bots ([`ChessBotList.py`](Bots/ChessBotList.py)) as well as an example pawn moving bot ([`BaseChessBot.py`](Bots/BaseChessBot.py))
+- [`main.py`](main.py): Main execution point
+- [`ParallelPlayer.py`](ParallelPlayer.py): Threaded wrapper for bot execution
+- [`ChessRules.py`](ChessRules.py): Basic custom chess rules and verification
+- [`ChessArena.py`](ChessArena.py): Actual GUI
+- other internal classes to run the game
 
 # Libraries
 This software requires python 3.10+ together with two libraries:
