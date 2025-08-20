@@ -10,7 +10,6 @@ from PyQt6.QtWidgets import QWidget, QApplication, QFrame, QMessageBox, QTableWi
 from BoardManager import BoardManager
 from BotWidget import BotWidget
 from Bots.ChessBotList import *
-from ChessRules import *
 from Data.UI import Ui_MainWindow
 from GameManager import GameManager
 from ParallelPlayer import *
@@ -72,7 +71,7 @@ class ChessArena(Ui_MainWindow, QWidget):
         self.chessboardView.resizeEvent = self.update_chessboard
 
     def update_chessboard(self, *args, **kwargs):
-        """ Update chessboard to fit in view """
+        """Update chessboard to fit in view"""
 
         view = self.chessboardView
         shape = self.board_manager.board.shape
@@ -97,6 +96,7 @@ class ChessArena(Ui_MainWindow, QWidget):
             self.add_system_message("# " + str(COLOR_NAMES[winner]) + " won the match")
 
     def select_and_load_board(self):
+        """Open board file selector and load the selected file"""
         path = QtWidgets.QFileDialog.getOpenFileName(
             self,
             "Select board",
@@ -113,11 +113,13 @@ class ChessArena(Ui_MainWindow, QWidget):
             self.setup_players()
 
     def load_assets(self):
+        """Load board and piece images"""
         self.white_square = QtGui.QPixmap("Data/assets/light_square.png")
         self.black_square = QtGui.QPixmap("Data/assets/dark_square.png")
         PieceManager.load_assets()
 
     def setup_board(self):
+        """Render the current board position"""
         path: str = os.path.relpath(self.board_manager.path, self.BOARDS_DIR)
         if os.pardir in path:
             path = self.board_manager.path
@@ -146,6 +148,7 @@ class ChessArena(Ui_MainWindow, QWidget):
         self.update_chessboard()
 
     def setup_players(self):
+        """Reset the game and set up player widgets list"""
         self.game_manager.reset()
         layout = self.botsList.layout()
         for i in reversed(range(layout.count())):
@@ -174,15 +177,18 @@ class ChessArena(Ui_MainWindow, QWidget):
         QTimer.singleShot(1, resize)
 
     def start(self):
+        """Set up a new game"""
         self.setup_board()
         self.setup_players()
         self.chess_scene.update()
 
     def copy_board(self):
+        """Copy the current board position as FEN in the clipboard"""
         fen: str = self.board_manager.get_fen()
         QApplication.clipboard().setText(fen)
 
     def export_board(self):
+        """Open the export file selector and save the board"""
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save board as ...",
@@ -194,16 +200,27 @@ class ChessArena(Ui_MainWindow, QWidget):
         self.board_manager.save(path)
 
     def reload_board(self):
+        """Reload the board"""
         self.board_manager.reload()
         self.setup_board()
 
     def show_message(self, message: str, title: str = "Message"):
+        """
+        Show a modal with the given message
+        :param message: The message to display
+        :param title: The modal's title
+        """
         msgbox = QMessageBox(self)
         msgbox.setWindowTitle(title)
         msgbox.setText(message)
         msgbox.open()
 
     def push_move_to_history(self, move: str, player: str):
+        """
+        Add a move to the history
+        :param move: The move description
+        :param player: The player who made the move
+        """
         tab = self.movesList
         tab.insertRow(tab.rowCount())
         tab.setItem(tab.rowCount() - 1, 0, QTableWidgetItem(str(tab.rowCount())))
