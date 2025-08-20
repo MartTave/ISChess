@@ -17,6 +17,28 @@ if TYPE_CHECKING:
     from ChessArena import ChessArena
 
 
+def rotate_coordinates(size: tuple[int, int], pt: tuple[int, int], rot: int) -> tuple[int, int]:
+    """
+    Rotate the given coordinates by the indicated angle
+    :param size: Size of the board in the current orientation
+    :param pt: Coordinates in the current orientation
+    :param rot: Number of 90° clockwise rotations to perform
+    :return: The rotated coordinates
+    """
+    rot = rot % 4
+    if rot == 0:
+        return pt
+
+    y, x = pt
+    y2 = size[0] - y - 1
+    x2 = size[1] - x - 1
+    if rot == 1:
+        return x, y2
+    if rot == 2:
+        return y2, x2
+    return x2, y
+
+
 class GameManager:
     MIN_WAIT = 500
     GRACE_RATIO = 0.05
@@ -124,6 +146,7 @@ class GameManager:
         if self.current_player is None:
             return False
 
+        self.min_wait.stop()
         self.timeout.stop()
         if forced:
             print("Player took too long, terminating thread")
@@ -249,10 +272,15 @@ class GameManager:
         if start_piece[0] == "p" and end[0] == board.shape[0] - 1:
             board[end[0], end[1]] = "q" + self.current_player.color
 
-        col1 = "ABCDEFGH"[7 - start[1]]
-        col2 = "ABCDEFGH"[7 - end[1]]
-        row1 = start[0] + 1
-        row2 = end[0] + 1
+        sequence: str = self.get_sequence()
+        rot: int = int(sequence[2])
+        real_start = rotate_coordinates(board.shape, start, rot)
+        real_end = rotate_coordinates(board.shape, end, rot)
+        real_height, real_width = self.board_manager.board.shape
+        col1 = "ABCDEFGH"[real_width - 1 - real_start[1]]
+        col2 = "ABCDEFGH"[real_width - 1 - real_end[1]]
+        row1 = real_start[0] + 1
+        row2 = real_end[0] + 1
         self.arena.push_move_to_history(f"{col1}{row1} -> {col2}{row2}", color_name)
 
         return True
