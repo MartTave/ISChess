@@ -1,20 +1,26 @@
 import os.path
+from typing import Optional, Dict
 
-from PyQt6 import QtCore, QtWidgets, QtGui
+from PyQt6 import QtWidgets, QtGui
 from PyQt6 import uic
+from PyQt6.QtCore import QTimer, QRectF
+from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtWidgets import QApplication, QFrame, QMessageBox, QTableWidgetItem, QMainWindow
 
+from BoardManager import BoardManager
+from BotWidget import BotWidget
 from Bots.ChessBotList import *
-from ChessRules import *
+from Data.UI import Ui_MainWindow
+from GameManager import GameManager
 from ParallelPlayer import *
-from Bots import *
+from PieceManager import PieceManager
 
-import numpy as np
+from Bots import *
 
 #   Wrap up for QApplication
 class ChessApp(QtWidgets.QApplication):
     def __init__(self):
         super().__init__([])
-
 
     def start(self):
         arena = ChessArena()
@@ -24,253 +30,203 @@ class ChessApp(QtWidgets.QApplication):
         self.exec()
 
 #   Main window to handle the chess board
-CHESS_PIECES = ["k",  "q", "n", "b", "r", "p"]
-CHESS_COLOR = {"w" : [QtGui.QColor(255,255,255), QtGui.QColor(0,0,0)], "b" : [QtGui.QColor(0,0,0), QtGui.QColor(255,255,255)],
-               "r" : [QtGui.QColor(200,0,0), QtGui.QColor(50,255,255)], "y" : [QtGui.QColor(200,200,0), QtGui.QColor(50,50,255)]}
-COLOR_NAMES = {"w" : "White", "b":"Black", "r":"Red", "y":"Yellow"}
-CHESS_PIECES_NAMES = {"k":"King", "q":"Queen", "n":"Knight", "b":"Bishop", "r":"Rook", "p":"Pawn"}
-class ChessArena(QtWidgets.QWidget):
+class ChessArena(Ui_MainWindow, QMainWindow):
     PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
     BOARDS_DIR = os.path.join(PROJECT_DIR, "Data", "maps")
+    START_ICON = QtGui.QIcon.fromTheme("media-playback-start")
+    STOP_ICON = QtGui.QIcon.fromTheme("media-playback-stop")
 
     def __init__(self):
         super().__init__()
 
         uic.loadUi("Data/UI.ui", self)
 
-        #   Render for chess board
+        # Render for chess board
         self.chess_scene = QtWidgets.QGraphicsScene()
-        self.chess_scene.setBackgroundBrush(QtGui.QBrush(QtGui.QColor("white")))
-        #self.chess_scene.setBackgroundBrush(QBrush(Qt6.lightGray))
         self.chessboardView.setScene(self.chess_scene)
 
-        self.loadBoardButton.clicked.connect(self.select_and_load_board)
-
-        self.launchGameButton.clicked.connect(self.launch_game)
-
+        # Assets
+        self.white_square: Optional[QPixmap] = None
+        self.black_square: Optional[QPixmap] = None
+        self.pieces_imgs: Dict[str, QImage] = {}
         self.load_assets()
 
-        self.current_player = None
+        # Variables
+        self.game_manager: GameManager = GameManager(self)
+        self.board_manager: BoardManager = self.game_manager.board_manager
 
-    def add_system_message(self, message):
-        msg_widget = QtWidgets.QLabel(message)
-        msg_widget.setWordWrap(True)
-        print("[SYS]", message)
-        self.systemMessagesLayout.addWidget(msg_widget)
-        self.systemMessagesBox = QtWidgets.QScrollArea()
-        self.systemMessagesBox.verticalScrollBar().setSliderPosition(self.systemMessagesBox.verticalScrollBar().maximum())
+        # Board actions
+        self.actionLoad.triggered.connect(self.select_and_load_board)
+        self.actionReload.triggered.connect(self.reload_board)
+        self.actionCopy.triggered.connect(self.copy_board)
+        self.actionExport.triggered.connect(self.export_board)
 
-    #   Called to start the bot simulation
-    def launch_game(self):
-        self.add_system_message("# Starting new Game #")
-        #   Prepare AIs
-        self.players_AI = {}
-        for cid, color in enumerate(self.players_AI_choice):
-            self.players_AI[color] = CHESS_BOT_LIST[self.players_AI_choice[color].currentText()]
-            self.add_system_message("AI #" + str(cid) + " = " + str(self.players_AI[color].__name__))
+        # Game actions
+        self.actionUndo.triggered.connect(self.game_manager.undo_move)
+        self.actionStart.triggered.connect(self.game_manager.start_stop)
+        self.actionRedo.triggered.connect(self.game_manager.redo_move)
 
-        self.nbr_turn_to_play = int(self.maxTurnBudget.text())
-        self.max_time_budget = float(self.timeBudgetInput.text())
+        self.movesList.resizeColumnsToContents()
 
-        self.play_next_turn()
+        self.chessboardView.resizeEvent = self.update_chessboard
 
-    def play_next_turn(self):
-        if self.current_player is not None:
-            print("Cannot launch new turn while already processing")
-            return
+    def update_chessboard(self, *args, **kwargs):
+        """Update chessboard to fit in view"""
 
-        if self.nbr_turn_to_play == 0:
-            print("No more play to do")
-            self.end_game(None)
-            return
-
-        next_player_color = self.player_order[0:3]
-
-        #   Prepare board view
-        rotated_view_board = np.rot90(self.board, int(next_player_color[2]))
-        self.current_player = ParallelTurn(self.players_AI[next_player_color[1]], self.player_order, rotated_view_board, self.max_time_budget)
-        self.current_player.setTerminationEnabled(True)
-        self.current_player.start()
-
-        #   Timer to call
-        QtCore.QTimer.singleShot(int(self.max_time_budget * 1000 * 1.05), self.end_turn)
-
-
-    def end_turn(self):
-        all_other_defeated = False
-
-        if self.current_player.isRunning():
-            self.current_player.terminate()
-            self.add_system_message(COLOR_NAMES[self.current_player.color] + " did not end his turn")
-        else:
-
-            player_color = self.current_player.color
-
-            next_play = self.current_player.next_move
-
-            if not move_is_valid(self.player_order, next_play, self.current_player.board):
-                self.add_system_message(COLOR_NAMES[player_color] + " invalid move from " + str(next_play[0]) + " to " + str(next_play[1]))
-                return
-
-            self.add_system_message(COLOR_NAMES[player_color] + " moved " + CHESS_PIECES_NAMES[self.current_player.board[next_play[0][0], next_play[0][1]][0]] +
-                                    " from " + str(next_play[0]) + " to " + str(next_play[1]))
-
-            if self.current_player.board[next_play[1][0], next_play[1][1]] != '':
-                self.add_system_message(COLOR_NAMES[player_color] + " captured " + COLOR_NAMES[self.current_player.board[next_play[1][0], next_play[1][1]][1]] + " " + CHESS_PIECES_NAMES[self.current_player.board[next_play[1][0], next_play[1][1]][0]])
-
-            #   apply move
-            self.current_player.board[next_play[1][0], next_play[1][1]] = self.current_player.board[next_play[0][0], next_play[0][1]]
-            self.current_player.board[next_play[0][0], next_play[0][1]] = ''
-
-            #   check for promotion
-            if self.current_player.board[next_play[1][0], next_play[1][1]][0] == 'p' and next_play[1][0] == self.current_player.board.shape[0]-1:
-                self.current_player.board[next_play[1][0], next_play[1][1]] = "q" + self.current_player.board[next_play[1][0], next_play[1][1]][1]
-
-            all_other_defeated = True
-            for row in self.board:
-                for elem in row:
-                    if len(elem) > 0 and elem[0] == 'k':
-                        if int(self.player_order[self.player_order.find(elem[1])-1]) != int(self.current_player.team):
-                            all_other_defeated = False
-
-        #   Update board state
-        self.current_player = None
-
-        self.setup_board()
-
-        #   Current player goes at the end of the play queue
-        self.player_order = self.player_order[3:] + self.player_order[0:3]
-        self.nbr_turn_to_play -= 1
-
-        if all_other_defeated:
-            self.end_game(player_color)
-        else:
-            self.play_next_turn()
-
-
-    def end_game(self, winner):
-        if winner is None:
-            self.add_system_message("# Match ended in a draw")
-        else:
-            self.add_system_message("# " + str(COLOR_NAMES[winner]) + " won the match")
+        view = self.chessboardView
+        shape = self.board_manager.board.shape
+        board_w = shape[1] * self.black_square.size().width()
+        board_h = shape[0] * self.black_square.size().height()
+        w_ratio = board_w / view.rect().width()
+        h_ratio = board_h / view.rect().height()
+        ratio = max(w_ratio, h_ratio)
+        w = view.rect().width() * ratio
+        h = view.rect().height() * ratio
+        rect = QRectF(0, 0, w, h)
+        view.setSceneRect(QRectF((board_w - w) / 2, (board_h - h) / 2, w, h))
+        view.fitInView(rect)
 
     def select_and_load_board(self):
-        path = QtWidgets.QFileDialog.getOpenFileName(self, "Select board", self.BOARDS_DIR, "Board File (*.brd)")
+        """Open board file selector and load the selected file"""
+        path = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Select board",
+            self.BOARDS_DIR,
+            "Board File (*.brd *.fen)"
+        )
 
         if path is None:
             return
         path = path[0]
 
-        self.board = self.load_board(path)
-
-        if self.board is None:
-            return
-
-        self.setup_board()
-        self.setup_players()
-
-    def load_board(self, path):
-        try:
-            with open(path, "r") as f:
-                data = f.read()
-
-                lines = data.split("\n")
-                self.player_order = lines[0]
-                elems = [l.replace('--', '').split(",") for l in lines[1:]]
-
-                #   Protection against final empty lines
-                while len(elems) > 0 and len(elems[-1]) == 0:
-                    del elems[-1]
-
-                #   check lines length equals
-                for l in elems:
-                    if len(l) != len(elems[0]):
-                        return None
-
-                return np.array(elems, dtype='O')
-        except Exception as e:
-            print(e)
-            return None
-
-        return None
+        if self.board_manager.load_file(path):
+            self.setup_board()
+            self.setup_players()
+            self.show_status("Board loaded")
 
     def load_assets(self):
+        """Load board and piece images"""
         self.white_square = QtGui.QPixmap("Data/assets/light_square.png")
         self.black_square = QtGui.QPixmap("Data/assets/dark_square.png")
-
-        self.pieces_imgs = {}
-
-        for p in CHESS_PIECES:
-            image = QtGui.QImage("Data/assets/" + p + ".png")
-            self.pieces_imgs[p] = image
-
-    def setup_players(self):
-        for i in reversed(range(self.playersList.count())):
-            if self.playersList.itemAt(i).widget() is not None:
-                self.playersList.itemAt(i).widget().setParent(None)
-
-        self.players_AI_choice = {}
-        for color in self.colored_piece_pixmaps:
-            l = QtWidgets.QLabel("Color:"  + COLOR_NAMES[color])
-            self.playersList.addWidget(l)
-
-            choice = QtWidgets.QComboBox()
-
-            for name in CHESS_BOT_LIST:
-                choice.addItem(name, CHESS_BOT_LIST[name])
-            choice.setCurrentIndex(0)
-
-            self.players_AI_choice[color] = choice
-            self.playersList.addWidget(choice)
-
-        self.playersList.addItem(QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding))
+        PieceManager.load_assets()
 
     def setup_board(self):
+        """Render the current board position"""
+        path: str = os.path.relpath(self.board_manager.path, self.BOARDS_DIR)
+        if os.pardir in path:
+            path = self.board_manager.path
+        self.currentBoardValue.setText(path)
 
-        for i in reversed(self.chess_scene.items()):
-            self.chess_scene.removeItem((i))
+        self.chess_scene.clear()
 
-        #   Maintain the pointer towards the items on the board
-        self.piece_items = np.array([[None] * self.board.shape[1]]*self.board.shape[0], dtype=object)
-        #   Maintain list of colored pixmap
-        self.colored_piece_pixmaps = {}
+        board = self.board_manager.board
+        height, width = board.shape
 
-        for y in range(self.board.shape[1]):
-            for x in range(self.board.shape[0]):
-
+        for y in range(height):
+            for x in range(width):
+                # Draw board square
                 square_color = self.white_square if (x+y) % 2 == 0 else self.black_square
                 square_item = self.chess_scene.addPixmap(square_color)
-                square_item.setPos(QtCore.QPointF(square_color.size().width()*y,square_color.size().height()*x))
+                square_item.setPos(QtCore.QPointF(square_color.size().width() * x, square_color.size().height() * y))
 
-                if self.board[x,y] != '' and self.board[x,y] != 'XX':
-                    player_piece = self.board[x,y][0]
-                    player_color = self.board[x,y][1]
+                # If tile is empty, continue
+                if board[y, x] in ("", "XX"):
+                    continue
 
-                    if player_color not in self.colored_piece_pixmaps:
-                        self.colored_piece_pixmaps[player_color] = {}
+                player_piece, player_color = board[y, x]
 
-                    if player_piece not in self.colored_piece_pixmaps[player_color]:
-                        piece_img = self.pieces_imgs[player_piece]
-                        copy = piece_img.copy()
+                img = self.chess_scene.addPixmap(PieceManager.get_piece_img(player_color, player_piece))
+                img.setPos(QtCore.QPointF(square_color.size().width() * x, square_color.size().height() * y))
+        self.update_chessboard()
 
-                        def mix(Q1, Q2, f, a):
-                            return QtGui.QColor(int(Q1.red()   * f + Q2.red()   * (1-f)),
-                                                int(Q1.green() * f + Q2.green() * (1-f)),
-                                                int(Q1.blue()  * f + Q2.blue()  * (1-f)), a)
+    def setup_players(self):
+        """Reset the game and set up player widgets list"""
+        self.game_manager.reset()
+        layout = self.botsList.layout()
+        for i in reversed(range(layout.count())):
+            if layout.itemAt(i).widget() is not None:
+                layout.itemAt(i).widget().setParent(None)
 
-                        for px in range(copy.size().width()):
-                            for py in range(copy.size().height()):
-                                copy.setPixelColor(px, py, mix(CHESS_COLOR[player_color][0], CHESS_COLOR[player_color][1], copy.pixelColor(px, py).red() / 255., copy.pixelColor(px, py).alpha()))
+        for i, color in enumerate(self.board_manager.available_colors):
+            player = BotWidget(color)
 
-                        self.colored_piece_pixmaps[player_color][player_piece] = QtGui.QPixmap().fromImage(copy)
+            bot_selector = player.playerBot
+            for name in CHESS_BOT_LIST:
+                bot_selector.addItem(name, CHESS_BOT_LIST[name])
+            bot_selector.setCurrentIndex(0)
+            if i != 0:
+                sep = QtWidgets.QFrame()
 
-                    self.piece_items[x,y] = self.chess_scene.addPixmap(self.colored_piece_pixmaps[player_color][player_piece])
-                    self.piece_items[x,y].setPos(QtCore.QPointF(square_color.size().width()*y,square_color.size().height()*x))
+                sep.setFrameShape(QFrame.Shape.HLine)
+                sep.setFrameShadow(QFrame.Shadow.Sunken)
+                layout.addWidget(sep)
+            layout.addWidget(player)
+            self.game_manager.add_player(color, player)
 
-        self.chessboardView.fitInView(self.chess_scene.sceneRect())
+        # TODO: Find a better solution
+        def resize():
+            self.botsScrollArea.setMaximumHeight(layout.maximumSize().height() + 2)
+        QTimer.singleShot(1, resize)
 
     def start(self):
-        self.board = self.load_board("Data/maps/default.brd")
+        """Set up a new game"""
         self.setup_board()
         self.setup_players()
         self.chess_scene.update()
+
+    def copy_board(self):
+        """Copy the current board position as FEN in the clipboard"""
+        fen: str = self.board_manager.get_fen()
+        QApplication.clipboard().setText(fen)
+        self.show_status("Copied board FEN to clipboard")
+
+    def export_board(self):
+        """Open the export file selector and save the board"""
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save board as ...",
+            self.BOARDS_DIR,
+            "Board File (*.brd *.fen)"
+        )
+        if path == "":
+            return
+        self.board_manager.save(path)
+        self.show_status("Board exported")
+
+    def reload_board(self):
+        """Reload the board"""
+        self.board_manager.reload()
+        self.setup_board()
+        self.show_status("Board reloaded")
+
+    def show_message(self, message: str, title: str = "Message"):
+        """
+        Show a modal with the given message
+        :param message: The message to display
+        :param title: The modal's title
+        """
+        msgbox = QMessageBox(self)
+        msgbox.setWindowTitle(title)
+        msgbox.setText(message)
+        msgbox.open()
+
+    def show_status(self, message: str, duration: int = 3000):
+        """
+        Show a message in the status bar
+        :param message: The message to display
+        :param duration: The duration of the message in milliseconds
+        """
+        self.statusbar.showMessage(message, duration)
+
+    def push_move_to_history(self, move: str, player: str):
+        """
+        Add a move to the history
+        :param move: The move description
+        :param player: The player who made the move
+        """
+        tab = self.movesList
+        tab.insertRow(tab.rowCount())
+        tab.setItem(tab.rowCount() - 1, 0, QTableWidgetItem(str(tab.rowCount())))
+        tab.setItem(tab.rowCount() - 1, 1, QTableWidgetItem(move))
+        tab.setItem(tab.rowCount() - 1, 2, QTableWidgetItem(player))
+        tab.resizeColumnsToContents()
