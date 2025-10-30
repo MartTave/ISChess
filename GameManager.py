@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Tuple
 
 import numpy as np
 from PyQt6.QtCore import QTimer
@@ -17,7 +17,9 @@ if TYPE_CHECKING:
     from ChessArena import ChessArena
 
 
-def rotate_coordinates(size: tuple[int, int], pt: tuple[int, int], rot: int) -> tuple[int, int]:
+def rotate_coordinates(
+    size: tuple[int, int], pt: tuple[int, int], rot: int
+) -> tuple[int, int]:
     """
     Rotate the given coordinates by the indicated angle
     :param size: Size of the board in the current orientation
@@ -79,10 +81,12 @@ class GameManager:
         :return: The player sequence
         """
         if full:
-            start = self.board_manager.player_order[:3*self.turn]
-            end = self.board_manager.player_order[3*self.turn:]
+            start = self.board_manager.player_order[: 3 * self.turn]
+            end = self.board_manager.player_order[3 * self.turn :]
             return end + start
-        return self.board_manager.player_order[self.turn * 3:self.turn * 3 + 3]
+        return self.board_manager.player_order[
+            self.turn * 3 : self.turn * 3 + 3
+        ]
 
     def next(self) -> bool:
         """
@@ -106,17 +110,14 @@ class GameManager:
 
         self.player_finished = False
         self.current_player = ParallelTurn(
-            func,
-            sequence,
-            np.rot90(board, int(sequence[2])),
-            budget
+            func, sequence, np.rot90(board, int(sequence[2])), budget
         )
         self.current_player.setTerminationEnabled(True)
         self.current_player.finished.connect(self.on_player_finished)
         self.current_player.start()
 
         # Timer to call
-        #self.timeout.singleShot(int(budget * 1000 * 1.05), lambda: self.end_turn(forced=True))
+        # self.timeout.singleShot(int(budget * 1000 * 1.05), lambda: self.end_turn(forced=True))
         budget_ms: int = int(budget * 1000 * (1 + self.GRACE_RATIO))
         self.timeout.start(budget_ms)
         if self.MIN_WAIT < budget_ms:
@@ -180,7 +181,9 @@ class GameManager:
         """
         self.nbr_turn_to_play = self.arena.autoMovesCount.value()
         if self.nbr_turn_to_play <= 0:
-            self.arena.show_message(f"Cannot start auto-playing, number of moves is {self.nbr_turn_to_play}, must be >0")
+            self.arena.show_message(
+                f"Cannot start auto-playing, number of moves is {self.nbr_turn_to_play}, must be >0"
+            )
             return False
 
         self.update_start_button(playing=True)
@@ -215,7 +218,9 @@ class GameManager:
         self.arena.startStop.setIcon(icon)
 
         if playing and self.auto_playing:
-            self.arena.startStop.setText(f"{self.nbr_turn_to_play} move(s) left")
+            self.arena.startStop.setText(
+                f"{self.nbr_turn_to_play} move(s) left"
+            )
         else:
             self.arena.startStop.setText(None)
 
@@ -245,7 +250,10 @@ class GameManager:
         Try to apply the move chosen by the current player
         :return: ``True`` if successful, ``False`` if the move is invalid
         """
-        move: tuple[tuple[int, int], tuple[int, int]] = self.current_player.next_move
+        move: tuple[tuple[int, int], tuple[int, int]] = (
+            self.current_player.next_move
+        )
+
         start, end = move
         color: str = self.current_player.color
         color_name: str = PieceManager.COLOR_NAMES[color]
@@ -258,15 +266,21 @@ class GameManager:
         start_piece = board[start[0], start[1]]
         end_piece = board[end[0], end[1]]
 
-        print(f"{color_name} moved {PieceManager.get_piece_name(start_piece)} from {start} to {end}")
+        print(
+            f"{color_name} moved {PieceManager.get_piece_name(start_piece)} from {start} to {end}"
+        )
 
         # Capture
         if end_piece != "":
-            print(f"{color_name} captured {PieceManager.get_piece_name(end_piece)}")
+            print(
+                f"{color_name} captured {PieceManager.get_piece_name(end_piece)}"
+            )
 
         # Apply move
         board[end[0], end[1]] = start_piece
         board[start[0], start[1]] = ""
+
+        self.arena.lastMove = (start, end)
 
         # Promotion
         if start_piece[0] == "p" and end[0] == board.shape[0] - 1:
@@ -281,7 +295,9 @@ class GameManager:
         col2 = "ABCDEFGH"[real_width - 1 - real_end[1]]
         row1 = real_start[0] + 1
         row2 = real_end[0] + 1
-        self.arena.push_move_to_history(f"{col1}{row1} -> {col2}{row2}", color_name)
+        self.arena.push_move_to_history(
+            f"{col1}{row1} -> {col2}{row2}", color_name
+        )
 
         return True
 
@@ -295,5 +311,7 @@ class GameManager:
                     return
 
         color_name: str = PieceManager.COLOR_NAMES[current_color]
-        self.arena.show_message(f"{color_name} player won the match", "End of game")
+        self.arena.show_message(
+            f"{color_name} player won the match", "End of game"
+        )
         self.stop()

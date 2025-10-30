@@ -5,7 +5,13 @@ from PyQt6 import QtWidgets, QtGui
 from PyQt6 import uic
 from PyQt6.QtCore import QTimer, QRectF
 from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QApplication, QFrame, QMessageBox, QTableWidgetItem, QMainWindow
+from PyQt6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QMessageBox,
+    QTableWidgetItem,
+    QMainWindow,
+)
 
 from BoardManager import BoardManager
 from BotWidget import BotWidget
@@ -16,6 +22,7 @@ from ParallelPlayer import *
 from PieceManager import PieceManager
 
 from Bots import *
+
 
 #   Wrap up for QApplication
 class ChessApp(QtWidgets.QApplication):
@@ -29,11 +36,16 @@ class ChessApp(QtWidgets.QApplication):
 
         self.exec()
 
+
 #   Main window to handle the chess board
 class ChessArena(Ui_MainWindow, QMainWindow):
     PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
     BOARDS_DIR = os.path.join(PROJECT_DIR, "Data", "maps")
     START_ICON = QtGui.QIcon.fromTheme("media-playback-start")
+    import ipdb
+
+    ipdb.set_trace()
+
     STOP_ICON = QtGui.QIcon.fromTheme("media-playback-stop")
 
     def __init__(self):
@@ -70,6 +82,8 @@ class ChessArena(Ui_MainWindow, QMainWindow):
 
         self.chessboardView.resizeEvent = self.update_chessboard
 
+        self.lastMove: Tuple[int, int] = None
+
     def update_chessboard(self, *args, **kwargs):
         """Update chessboard to fit in view"""
 
@@ -89,10 +103,7 @@ class ChessArena(Ui_MainWindow, QMainWindow):
     def select_and_load_board(self):
         """Open board file selector and load the selected file"""
         path = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            "Select board",
-            self.BOARDS_DIR,
-            "Board File (*.brd *.fen)"
+            self, "Select board", self.BOARDS_DIR, "Board File (*.brd *.fen)"
         )
 
         if path is None:
@@ -122,21 +133,46 @@ class ChessArena(Ui_MainWindow, QMainWindow):
         board = self.board_manager.board
         height, width = board.shape
 
+        start, end = -1, -1
+        if self.lastMove:
+            start, end = self.lastMove
+
         for y in range(height):
             for x in range(width):
                 # Draw board square
-                square_color = self.white_square if (x+y) % 2 == 0 else self.black_square
+                square_color = (
+                    self.white_square if (x + y) % 2 == 0 else self.black_square
+                )
                 square_item = self.chess_scene.addPixmap(square_color)
-                square_item.setPos(QtCore.QPointF(square_color.size().width() * x, square_color.size().height() * y))
+                square_item.setPos(
+                    QtCore.QPointF(
+                        square_color.size().width() * x,
+                        square_color.size().height() * y,
+                    )
+                )
 
                 # If tile is empty, continue
                 if board[y, x] in ("", "XX"):
                     continue
 
-                player_piece, player_color = board[y, x]
+                if (y, x) == end:
+                    # We do not want to render the piece for now, as we want to animate it !
+                    startPos = (
+                        square_color.size().width() * start[1],
+                        square_color.size().height() * start[0],
+                    )
+                    continue
 
-                img = self.chess_scene.addPixmap(PieceManager.get_piece_img(player_color, player_piece))
-                img.setPos(QtCore.QPointF(square_color.size().width() * x, square_color.size().height() * y))
+                player_piece, player_color = board[y, x]
+                img = self.chess_scene.addPixmap(
+                    PieceManager.get_piece_img(player_color, player_piece)
+                )
+                img.setPos(
+                    QtCore.QPointF(
+                        square_color.size().width() * x,
+                        square_color.size().height() * y,
+                    )
+                )
         self.update_chessboard()
 
     def setup_players(self):
@@ -165,7 +201,10 @@ class ChessArena(Ui_MainWindow, QMainWindow):
 
         # TODO: Find a better solution
         def resize():
-            self.botsScrollArea.setMaximumHeight(layout.maximumSize().height() + 2)
+            self.botsScrollArea.setMaximumHeight(
+                layout.maximumSize().height() + 2
+            )
+
         QTimer.singleShot(1, resize)
 
     def start(self):
@@ -186,7 +225,7 @@ class ChessArena(Ui_MainWindow, QMainWindow):
             self,
             "Save board as ...",
             self.BOARDS_DIR,
-            "Board File (*.brd *.fen)"
+            "Board File (*.brd *.fen)",
         )
         if path == "":
             return
@@ -226,7 +265,9 @@ class ChessArena(Ui_MainWindow, QMainWindow):
         """
         tab = self.movesList
         tab.insertRow(tab.rowCount())
-        tab.setItem(tab.rowCount() - 1, 0, QTableWidgetItem(str(tab.rowCount())))
+        tab.setItem(
+            tab.rowCount() - 1, 0, QTableWidgetItem(str(tab.rowCount()))
+        )
         tab.setItem(tab.rowCount() - 1, 1, QTableWidgetItem(move))
         tab.setItem(tab.rowCount() - 1, 2, QTableWidgetItem(player))
         tab.resizeColumnsToContents()
