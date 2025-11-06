@@ -1,5 +1,8 @@
+from typing import Dict
 from PyQt6 import QtGui
-from PyQt6.QtGui import QPixmap, QColor, QImage
+from PyQt6.QtGui import QColor, QImage, QPixmap
+
+from Piece import Piece
 
 
 class PieceManager:
@@ -37,8 +40,8 @@ class PieceManager:
         "p": "Pawn"
     }
 
-    PIECE_IMAGES = {}
-    CACHE = {}
+    PIECE_IMAGES: Dict[str, QImage] = {}
+    CACHE: Dict[str, Dict[str, QPixmap]] = {}
 
     @staticmethod
     def load_assets():
@@ -47,14 +50,14 @@ class PieceManager:
             PieceManager.PIECE_IMAGES[p] = image
 
     @staticmethod
-    def get_piece_img(color: str, piece: str) -> QPixmap:
+    def get_pixmap(color: str, piece: str):
         cache = PieceManager.CACHE
 
         if color not in cache:
             cache[color] = {}
 
         if piece not in cache[color]:
-            piece_img: QImage = PieceManager.PIECE_IMAGES[piece]
+            piece_img: QImage = PieceManager.PIECE_IMAGES[piece[0]]
             copy: QImage = piece_img.copy()
 
             def mix(c1: QColor, c2: QColor, f: float, a: int):
@@ -73,12 +76,24 @@ class PieceManager:
                         px, py,
                         mix(col1, col2, pixel.value() / 255, pixel.alpha())
                     )
-            cache[color][piece] = QtGui.QPixmap().fromImage(copy)
+            cache[color][piece] = QPixmap.fromImage(copy)
+        
         return cache[color][piece]
+
+    @staticmethod
+    def get_piece(color: str, piece: str) -> Piece:
+        pixmap = PieceManager.get_pixmap(color, piece)
+
+        return Piece(pixmap.copy(), piece, color)
 
     @staticmethod
     def get_piece_name(piece_and_col: str):
         piece, color = piece_and_col
-        piece_name = PieceManager.PIECE_NAMES[piece]
+        piece_name = PieceManager.PIECE_NAMES[piece[0]]
         color_name = PieceManager.COLOR_NAMES[color]
         return f"{color_name} {piece_name}"
+
+    @staticmethod
+    def upgrade_piece(piece: Piece, new_type: str):
+        new_pixmap = PieceManager.get_pixmap(piece.color, new_type)
+        piece.upgrade(new_type, new_pixmap)

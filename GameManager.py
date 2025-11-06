@@ -10,6 +10,7 @@ from BoardManager import BoardManager
 from BotWidget import BotWidget
 from ChessRules import move_is_valid
 from ParallelPlayer import ParallelTurn
+from Piece import Piece
 from PieceManager import PieceManager
 from Player import Player
 
@@ -163,7 +164,6 @@ class GameManager:
         self.current_player = None
         self.turn += 1
         self.turn %= len(self.players)
-        self.arena.setup_board()
 
         if self.auto_playing:
             self.nbr_turn_to_play -= 1
@@ -171,6 +171,7 @@ class GameManager:
                 self.stop()
             else:
                 self.next()
+
         return True
 
     def start(self) -> bool:
@@ -266,25 +267,34 @@ class GameManager:
         start_piece = board[start[0], start[1]]
         end_piece = board[end[0], end[1]]
 
+        start_piece_and_col = f"{start_piece.type}{start_piece.color}"
+
         print(
-            f"{color_name} moved {PieceManager.get_piece_name(start_piece)} from {start} to {end}"
+            f"{color_name} moved {PieceManager.get_piece_name(start_piece_and_col)} from {start} to {end}"
         )
 
         # Capture
-        if end_piece != "":
+        if end_piece != '':
+            end_piece_and_col = f"{end_piece.type}{end_piece.color}"
+
             print(
-                f"{color_name} captured {PieceManager.get_piece_name(end_piece)}"
+                f"{color_name} captured {PieceManager.get_piece_name(end_piece_and_col)}"
             )
 
         # Apply move
         board[end[0], end[1]] = start_piece
         board[start[0], start[1]] = ""
 
-        self.arena.lastMove = (start, end)
+        if type(end_piece) is Piece:
+            self.arena.chess_scene.removeItem(end_piece)
+            del end_piece
 
+        tile_width = self.arena.white_square.size().width()
+        tile_height = self.arena.white_square.size().width()
+        
         # Promotion
         if start_piece[0] == "p" and end[0] == board.shape[0] - 1:
-            board[end[0], end[1]] = "q" + self.current_player.color
+            PieceManager.upgrade_piece(board[end[0], end[1]], 'q')
 
         sequence: str = self.get_sequence()
         rot: int = int(sequence[2])
@@ -293,6 +303,9 @@ class GameManager:
         real_height, real_width = self.board_manager.board.shape
         col1 = "ABCDEFGH"[real_width - 1 - real_start[1]]
         col2 = "ABCDEFGH"[real_width - 1 - real_end[1]]
+        
+        start_piece.move(real_end[0], real_end[1], tile_width, tile_height);
+
         row1 = real_start[0] + 1
         row2 = real_end[0] + 1
         self.arena.push_move_to_history(

@@ -19,6 +19,7 @@ from Bots.ChessBotList import *
 from Data.UI import Ui_MainWindow
 from GameManager import GameManager
 from ParallelPlayer import *
+from Piece import Piece
 from PieceManager import PieceManager
 
 from Bots import *
@@ -82,8 +83,6 @@ class ChessArena(Ui_MainWindow, QMainWindow):
 
         self.chessboardView.resizeEvent = self.update_chessboard
 
-        self.lastMove: Tuple[int, int] = None
-
     def update_chessboard(self, *args, **kwargs):
         """Update chessboard to fit in view"""
 
@@ -133,10 +132,6 @@ class ChessArena(Ui_MainWindow, QMainWindow):
         board = self.board_manager.board
         height, width = board.shape
 
-        start, end = -1, -1
-        if self.lastMove:
-            start, end = self.lastMove
-
         for y in range(height):
             for x in range(width):
                 # Draw board square
@@ -155,24 +150,17 @@ class ChessArena(Ui_MainWindow, QMainWindow):
                 if board[y, x] in ("", "XX"):
                     continue
 
-                if (y, x) == end:
-                    # We do not want to render the piece for now, as we want to animate it !
-                    startPos = (
-                        square_color.size().width() * start[1],
-                        square_color.size().height() * start[0],
-                    )
-                    continue
-
-                player_piece, player_color = board[y, x]
-                img = self.chess_scene.addPixmap(
-                    PieceManager.get_piece_img(player_color, player_piece)
-                )
-                img.setPos(
+                piece: Piece = board[y, x]
+                
+                self.chess_scene.addItem(piece)
+                piece.setPos(
                     QtCore.QPointF(
                         square_color.size().width() * x,
                         square_color.size().height() * y,
                     )
                 )
+
+                piece.setZValue(1000)
         self.update_chessboard()
 
     def setup_players(self):

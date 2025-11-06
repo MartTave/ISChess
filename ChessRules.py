@@ -79,14 +79,14 @@ def move_is_valid(player_order, move, board):
     if board[start[0], start[1]] == '' or board[start[0], start[1]] == 'X':
         return False
 
-    piece, colour = board[start[0], start[1]]
-
+    piece = board[start[0], start[1]]
+    
     #   Moving right color
-    if colour != player_color:
+    if piece.color != player_color:
         return False
 
     #   check piece specific rules
-    if piece == 'p':
+    if piece.type == 'p':
         if end[0] != start[0] + 1: #    Pawn always move forward
             return False
 
@@ -97,7 +97,7 @@ def move_is_valid(player_order, move, board):
             print(team_at(end), "!=", player_team, "==", team_at(end) != player_team)
             print(abs(end[1] - start[1]) == 1 and (not is_free(end)) and int(team_at(end)) != player_team)
             return abs(end[1] - start[1]) == 1 and (not is_free(end)) and int(team_at(end)) != player_team
-    elif piece == 'n':
+    elif piece.type == 'n':
         dx = abs(end[0] - start[0])
         dy = abs(end[1] - start[1])
 
@@ -106,16 +106,16 @@ def move_is_valid(player_order, move, board):
         else: # invalid knight move
             return False
 
-    elif piece == 'b':
+    elif piece.type == 'b':
         return can_move_diagonally()
 
-    elif piece == 'r':
+    elif piece.type == 'r':
         return can_move_along_axis()
 
-    elif piece == "q":
+    elif piece.type == "q":
         return can_move_diagonally() != can_move_along_axis()
 
-    elif piece == "k":
+    elif piece.type == "k":
         dx = abs(end[0] - start[0])
         dy = abs(end[1] - start[1])
 
