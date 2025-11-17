@@ -1,9 +1,10 @@
+import math
 import os.path
 from typing import Optional, Dict
 
 from PyQt6 import QtWidgets, QtGui
 from PyQt6 import uic
-from PyQt6.QtCore import QTimer, QRectF
+from PyQt6.QtCore import QPointF, QTimer, QRectF
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import (
     QApplication,
@@ -119,6 +120,50 @@ class ChessArena(Ui_MainWindow, QMainWindow):
         self.white_square = QtGui.QPixmap("Data/assets/light_square.png")
         self.black_square = QtGui.QPixmap("Data/assets/dark_square.png")
         PieceManager.load_assets()
+
+    def remove_piece(self, piece: Piece):
+        pos = piece.pos()
+
+        piece.hide()
+
+        for i in range(len(piece.fragments)):
+            for j, fragment in enumerate(piece.fragments[i]):
+                fragmentItem = self.chess_scene.addPixmap(fragment)
+
+                center = piece.cutting_number / 2
+
+                vx = j - center
+                vy = i - center
+
+                k = 100
+
+                norm = math.sqrt(vx**2 + vy**2)
+
+                if norm != 0:
+                    x_norm = k * vx/norm
+                    y_norm = k * vy/norm
+
+                else:
+                    x_norm = k * vx
+                    y_norm = k * vy
+
+
+                rect = fragmentItem.sceneBoundingRect()
+
+                x = pos.x() + i*rect.width()
+                y = pos.y() + j*rect.height()
+
+                piece.addFragmentItem(fragmentItem, QPointF(x + x_norm, y + y_norm))
+            
+                # Mid
+                #fragmentItem.setPos(pos.x() + (rect.width() * (piece.cutting_number / 2)) - rect.width()/2,
+                #                    pos.y() + (rect.height() * (piece.cutting_number / 2)) - rect.height()/2)
+
+                fragmentItem.setPos(x, y)
+
+                fragmentItem.setZValue(1000);
+
+        piece.explode()
 
     def setup_board(self):
         """Render the current board position"""

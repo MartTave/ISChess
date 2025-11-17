@@ -68,29 +68,35 @@ def move_is_valid(player_order, move, board):
     #   Check boundary condition
     if start[0] < 0 or start[0] >= board.shape[0] or \
        start[1] < 0 or start[1] >= board.shape[1]:
+       print("boundary 1")
        return False
 
     #   Check boundary condition
     if end[0] < 0 or end[0] >= board.shape[0] or \
        end[1] < 0 or end[1] >= board.shape[1]:
+       print("boundary 2")
        return False
 
     #   Check piece moved
     if board[start[0], start[1]] == '' or board[start[0], start[1]] == 'X':
+        print("piece moved")
         return False
 
     piece = board[start[0], start[1]]
     
     #   Moving right color
     if piece.color != player_color:
+        print("right color")
         return False
 
     #   check piece specific rules
     if piece.type == 'p':
         if end[0] != start[0] + 1: #    Pawn always move forward
+            print("forward")
             return False
 
         if end[1] == start[1]:
+            print("free : ", is_free(end))
             return is_free(end)
         else:
             #   Capture ?

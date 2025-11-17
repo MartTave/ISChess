@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 
@@ -16,6 +16,7 @@ class BoardManager:
         self.path: Optional[str] = None
         self.player_order: str = "0w01b2"
         self.available_colors: list[str] = []
+        self.pieces = []
         self.load_file(self.DEFAULT_BOARD)
 
     def post_load(self):
@@ -26,6 +27,7 @@ class BoardManager:
         """
 
         new_board = np.empty_like(self.board, dtype=object)
+        self.pieces = []
 
         self.available_colors = []
         for y in range(self.board.shape[0]):
@@ -40,6 +42,8 @@ class BoardManager:
 
                 piece = PieceManager.get_piece(color, piece_type)
                 new_board[y, x] = piece
+                
+                self.pieces.append(piece)
 
         self.board = new_board
 

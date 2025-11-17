@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, Tuple
+import math
+from typing import List, Optional, TYPE_CHECKING, Tuple
 
 import numpy as np
 from PyQt6.QtCore import QTimer
@@ -53,6 +54,9 @@ class GameManager:
         self.turn: int = 0
         self.nbr_turn_to_play: int = 0
         self.current_player: Optional[ParallelTurn] = None
+        self.current_player_next_move = None
+        self.current_player_color = None
+        self.current_player_board = None
         self.player_finished: bool = False
         self.auto_playing: bool = False
         self.timeout = QTimer()
@@ -109,10 +113,29 @@ class GameManager:
         func_name, func = player.get_func()
         print(f"Player {self.turn}'s turn: {func_name} (budget: {budget:.2f}s)")
 
+        tile_width = self.arena.white_square.size().width()
+        tile_height = self.arena.white_square.size().width()
+
         self.player_finished = False
+
+        self.current_player_color = player.color
+        self.current_player_board = np.rot90(board, int(sequence[2]))
+
+        if func_name == "ManualMover":
+            self.start_manual_turn(player)
+
+            budget_ms: int = int(budget * 1000 * (1 + self.GRACE_RATIO))
+            self.timeout.start(budget_ms)
+
+            if self.MIN_WAIT < budget_ms:
+                self.min_wait.start(self.MIN_WAIT)
+
+            return True
+
         self.current_player = ParallelTurn(
-            func, sequence, np.rot90(board, int(sequence[2])), budget
+            func, sequence, self.current_player_board, budget, tile_width, tile_height
         )
+
         self.current_player.setTerminationEnabled(True)
         self.current_player.finished.connect(self.on_player_finished)
         self.current_player.start()
@@ -126,6 +149,43 @@ class GameManager:
 
         return True
 
+    def start_manual_turn(self, player):
+        for piece in self.board_manager.pieces:
+            if piece.color == player.color:
+                piece.enableMovement(True)
+                piece.signals.released.connect(self.on_piece_released)
+
+    def on_piece_released(self, piece, start, end):
+        tile_w = self.arena.white_square.width()
+        tile_h = self.arena.white_square.height()
+
+        start_tile = (
+            int(start.y() // tile_h),
+            int(start.x() // tile_w)
+        )
+        end_tile = (
+            int(end.y() // tile_h),
+            int(end.x() // tile_w)
+
+        )
+
+        snapped_x = end_tile[1] * tile_w
+        snapped_y = end_tile[0] * tile_h
+
+        piece.setPos(snapped_x, snapped_y)
+
+        if start_tile[0] == end_tile[0] and start_tile[1] == end_tile[1]:
+            return
+
+        for p in self.board_manager.pieces:
+            p.enableMovement(False)
+
+            if p.color == piece.color:
+                p.signals.released.disconnect()
+
+        self.end_turn(forced=False, manual_move=(start_tile, end_tile))
+
+
     def on_player_finished(self):
         """Callback called by the player when it has finished playing"""
         self.player_finished = True
@@ -135,7 +195,7 @@ class GameManager:
         if self.player_finished:
             self.end_turn()
 
-    def end_turn(self, forced: bool = False) -> bool:
+    def end_turn(self, forced: bool = False, manual_move=None) -> bool:
         """
         End the current turn
 
@@ -145,8 +205,34 @@ class GameManager:
                        took too long and was terminated early
         :return: ``True`` if successful, ``False`` if no turn was in progress
         """
+
+        if manual_move is not None:
+            self.current_player_next_move = manual_move
+
+            self.min_wait.stop()
+            self.timeout.stop()
+
+            self.apply_move()
+
+            if self.check_game_end():
+                return True
+
+            self.turn += 1
+            self.turn %= len(self.players)
+
+            if self.auto_playing:
+                self.nbr_turn_to_play -= 1
+                if self.nbr_turn_to_play <= 0:
+                    self.stop()
+                else:
+                    self.next()
+
+            return True
+
         if self.current_player is None:
             return False
+
+        self.current_player_next_move = self.current_player.next_move
 
         self.min_wait.stop()
         self.timeout.stop()
@@ -252,19 +338,23 @@ class GameManager:
         :return: ``True`` if successful, ``False`` if the move is invalid
         """
         move: tuple[tuple[int, int], tuple[int, int]] = (
-            self.current_player.next_move
+            self.current_player_next_move
         )
 
         start, end = move
-        color: str = self.current_player.color
+        color: str = self.current_player_color
         color_name: str = PieceManager.COLOR_NAMES[color]
-        board = self.current_player.board
+        board = self.current_player_board
+
+        tile_width = self.arena.white_square.size().width()
+        tile_height = self.arena.white_square.size().width()
+
+        start_piece = board[start[0], start[1]]
 
         if not move_is_valid(self.get_sequence(True), move, board):
             print(f"Invalid move from {start} to {end}")
             return False
 
-        start_piece = board[start[0], start[1]]
         end_piece = board[end[0], end[1]]
 
         start_piece_and_col = f"{start_piece.type}{start_piece.color}"
@@ -286,11 +376,11 @@ class GameManager:
         board[start[0], start[1]] = ""
 
         if type(end_piece) is Piece:
-            self.arena.chess_scene.removeItem(end_piece)
-            del end_piece
+            print("longueur avant : ", len(self.board_manager.pieces))
+            self.board_manager.pieces = [p for p in self.board_manager.pieces if p is not end_piece]
+            print("longueur après : ", len(self.board_manager.pieces))
 
-        tile_width = self.arena.white_square.size().width()
-        tile_height = self.arena.white_square.size().width()
+            self.arena.remove_piece(end_piece)
         
         # Promotion
         if start_piece[0] == "p" and end[0] == board.shape[0] - 1:
@@ -315,8 +405,8 @@ class GameManager:
         return True
 
     def check_game_end(self):
-        board = self.current_player.board
-        current_color = self.current_player.color
+        board = self.current_player_board
+        current_color = self.current_player_color
         for y in range(board.shape[0]):
             for x in range(board.shape[1]):
                 piece = board[y, x]
