@@ -15,7 +15,9 @@ def move_is_valid(player_order, move, board):
 
     #   Helper
     def is_free(pos):
-        return board[pos[0], pos[1]] == ''
+        val = board[pos[0], pos[1]]
+        print(val == '' or val is None)
+        return val == '' or val is None
 
     def color_at(pos):
         return board[pos[0], pos[1]][1]
@@ -78,7 +80,7 @@ def move_is_valid(player_order, move, board):
        return False
 
     #   Check piece moved
-    if board[start[0], start[1]] == '' or board[start[0], start[1]] == 'X':
+    if board[start[0], start[1]] in ('', 'X', None):
         print("piece moved")
         return False
 
@@ -98,11 +100,14 @@ def move_is_valid(player_order, move, board):
         if end[1] == start[1]:
             print("free : ", is_free(end))
             return is_free(end)
-        else:
-            #   Capture ?
-            print(team_at(end), "!=", player_team, "==", team_at(end) != player_team)
-            print(abs(end[1] - start[1]) == 1 and (not is_free(end)) and int(team_at(end)) != player_team)
-            return abs(end[1] - start[1]) == 1 and (not is_free(end)) and int(team_at(end)) != player_team
+        
+        if is_free(end):
+            # Diagonal but no piece
+            return False
+        
+        #   Capture ?
+        print(team_at(end), "!=", player_team, "==", team_at(end) != player_team)
+        return abs(end[1] - start[1]) == 1 and (not is_free(end)) and team_at(end) != player_team
     elif piece.type == 'n':
         dx = abs(end[0] - start[0])
         dy = abs(end[1] - start[1])
