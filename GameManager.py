@@ -159,23 +159,28 @@ class GameManager:
         tile_w = self.arena.white_square.width()
         tile_h = self.arena.white_square.height()
 
-        start_tile = (
-            int(start.y() // tile_h),
-            int(start.x() // tile_w)
-        )
-        end_tile = (
-            int(end.y() // tile_h),
-            int(end.x() // tile_w)
-
-        )
+        start_tile = (int(start.y() // tile_h), int(start.x() // tile_w))
+        end_tile = (int(end.y() // tile_h), int(end.x() // tile_w))
 
         snapped_x = end_tile[1] * tile_w
         snapped_y = end_tile[0] * tile_h
 
-        piece.setPos(snapped_x, snapped_y)
-
         if start_tile[0] == end_tile[0] and start_tile[1] == end_tile[1]:
+            piece.setPos(snapped_x, snapped_y)
             return
+
+        sequence = self.get_sequence()
+        rot = int(sequence[2])
+        board_shape = self.board_manager.board.shape
+        rotated_start_tile = rotate_coordinates(board_shape, start_tile, rot)
+        rotated_end_tile = rotate_coordinates(board_shape, end_tile, rot)
+        move = (rotated_start_tile, rotated_end_tile)
+
+        if not move_is_valid(self.get_sequence(True), move, self.current_player_board):
+            piece.setPos(piece.old_pos)
+            return
+
+        piece.setPos(snapped_x, snapped_y)
 
         for p in self.board_manager.pieces:
             p.enableMovement(False)
@@ -183,7 +188,7 @@ class GameManager:
             if p.color == piece.color:
                 p.signals.released.disconnect()
 
-        self.end_turn(forced=False, manual_move=(start_tile, end_tile))
+        self.end_turn(forced=False, manual_move=move)
 
 
     def on_player_finished(self):

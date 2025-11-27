@@ -44,10 +44,6 @@ class ChessArena(Ui_MainWindow, QMainWindow):
     PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
     BOARDS_DIR = os.path.join(PROJECT_DIR, "Data", "maps")
     START_ICON = QtGui.QIcon.fromTheme("media-playback-start")
-    import ipdb
-
-    ipdb.set_trace()
-
     STOP_ICON = QtGui.QIcon.fromTheme("media-playback-stop")
 
     def __init__(self):
@@ -192,7 +188,7 @@ class ChessArena(Ui_MainWindow, QMainWindow):
                 )
 
                 # If tile is empty, continue
-                if board[y, x] in ("", "XX"):
+                if board[y, x] in ("", "XX", None):
                     continue
 
                 piece: Piece = board[y, x]

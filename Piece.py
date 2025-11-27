@@ -147,11 +147,12 @@ class Piece(QGraphicsPixmapItem):
         if isinstance(value, str):
             return self.string() == value
 
-        return false
+        return False
 
     def __ne__(self, value):
         if isinstance(value, str):
             return self.string() != value
+        return not self.__eq__(value)
 
     def __getitem__(self, idx):
         if isinstance(idx, slice):
