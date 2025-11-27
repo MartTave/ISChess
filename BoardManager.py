@@ -1,8 +1,10 @@
 import os
 import re
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
+
+from PieceManager import PieceManager
 
 
 class BoardManager:
@@ -14,6 +16,7 @@ class BoardManager:
         self.path: Optional[str] = None
         self.player_order: str = "0w01b2"
         self.available_colors: list[str] = []
+        self.pieces = []
         self.load_file(self.DEFAULT_BOARD)
 
     def post_load(self):
@@ -22,14 +25,27 @@ class BoardManager:
 
         Builds a list of available player colors used on the board
         """
+
+        new_board = np.empty_like(self.board, dtype=object)
+        self.pieces = []
+
         self.available_colors = []
         for y in range(self.board.shape[0]):
             for x in range(self.board.shape[1]):
                 if self.board[y, x] in ("", "XX"):
+                    new_board[y, x] = self.board[y, x]
                     continue
-                piece, color = self.board[y, x]
+
+                piece_type, color = self.board[y, x]
                 if color not in self.available_colors:
                     self.available_colors.append(color)
+
+                piece = PieceManager.get_piece(color, piece_type)
+                new_board[y, x] = piece
+                
+                self.pieces.append(piece)
+
+        self.board = new_board
 
     def load_file(self, path: str) -> bool:
         """
@@ -202,10 +218,14 @@ class BoardManager:
                     if count != 0:
                         row += str(count)
                         count = 0
-                    type_, col = piece
+
+                    type_ = piece.type
+                    col = piece.color
+
                     if col == "w":
                         type_ = type_.upper()
                     row += type_
+
             if count != 0:
                 row += str(count)
             rows.append(row)
@@ -228,6 +248,9 @@ class BoardManager:
                 for x in range(self.board.shape[1]):
                     piece = self.board[y, x]
                     if piece == "":
-                        piece = "--"
-                    line.append(piece)
+                        line.append("--")
+                        continue;
+
+                    line.append(piece.string())
+
                 file.write("\n" + ",".join(line))

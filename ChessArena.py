@@ -1,11 +1,18 @@
+import math
 import os.path
 from typing import Optional, Dict
 
 from PyQt6 import QtWidgets, QtGui
 from PyQt6 import uic
-from PyQt6.QtCore import QTimer, QRectF
+from PyQt6.QtCore import QPointF, QTimer, QRectF
 from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QApplication, QFrame, QMessageBox, QTableWidgetItem, QMainWindow
+from PyQt6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QMessageBox,
+    QTableWidgetItem,
+    QMainWindow,
+)
 
 from BoardManager import BoardManager
 from BotWidget import BotWidget
@@ -13,9 +20,11 @@ from Bots.ChessBotList import *
 from Data.UI import Ui_MainWindow
 from GameManager import GameManager
 from ParallelPlayer import *
+from Piece import Piece
 from PieceManager import PieceManager
 
 from Bots import *
+
 
 #   Wrap up for QApplication
 class ChessApp(QtWidgets.QApplication):
@@ -29,11 +38,16 @@ class ChessApp(QtWidgets.QApplication):
 
         self.exec()
 
+
 #   Main window to handle the chess board
 class ChessArena(Ui_MainWindow, QMainWindow):
     PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
     BOARDS_DIR = os.path.join(PROJECT_DIR, "Data", "maps")
     START_ICON = QtGui.QIcon.fromTheme("media-playback-start")
+    import ipdb
+
+    ipdb.set_trace()
+
     STOP_ICON = QtGui.QIcon.fromTheme("media-playback-stop")
 
     def __init__(self):
@@ -89,10 +103,7 @@ class ChessArena(Ui_MainWindow, QMainWindow):
     def select_and_load_board(self):
         """Open board file selector and load the selected file"""
         path = QtWidgets.QFileDialog.getOpenFileName(
-            self,
-            "Select board",
-            self.BOARDS_DIR,
-            "Board File (*.brd *.fen)"
+            self, "Select board", self.BOARDS_DIR, "Board File (*.brd *.fen)"
         )
 
         if path is None:
@@ -110,6 +121,50 @@ class ChessArena(Ui_MainWindow, QMainWindow):
         self.black_square = QtGui.QPixmap("Data/assets/dark_square.png")
         PieceManager.load_assets()
 
+    def remove_piece(self, piece: Piece):
+        pos = piece.pos()
+
+        piece.hide()
+
+        for i in range(len(piece.fragments)):
+            for j, fragment in enumerate(piece.fragments[i]):
+                fragmentItem = self.chess_scene.addPixmap(fragment)
+
+                center = piece.cutting_number / 2
+
+                vx = j - center
+                vy = i - center
+
+                k = 100
+
+                norm = math.sqrt(vx**2 + vy**2)
+
+                if norm != 0:
+                    x_norm = k * vx/norm
+                    y_norm = k * vy/norm
+
+                else:
+                    x_norm = k * vx
+                    y_norm = k * vy
+
+
+                rect = fragmentItem.sceneBoundingRect()
+
+                x = pos.x() + i*rect.width()
+                y = pos.y() + j*rect.height()
+
+                piece.addFragmentItem(fragmentItem, QPointF(x + x_norm, y + y_norm))
+            
+                # Mid
+                #fragmentItem.setPos(pos.x() + (rect.width() * (piece.cutting_number / 2)) - rect.width()/2,
+                #                    pos.y() + (rect.height() * (piece.cutting_number / 2)) - rect.height()/2)
+
+                fragmentItem.setPos(x, y)
+
+                fragmentItem.setZValue(1000);
+
+        piece.explode()
+
     def setup_board(self):
         """Render the current board position"""
         path: str = os.path.relpath(self.board_manager.path, self.BOARDS_DIR)
@@ -125,18 +180,32 @@ class ChessArena(Ui_MainWindow, QMainWindow):
         for y in range(height):
             for x in range(width):
                 # Draw board square
-                square_color = self.white_square if (x+y) % 2 == 0 else self.black_square
+                square_color = (
+                    self.white_square if (x + y) % 2 == 0 else self.black_square
+                )
                 square_item = self.chess_scene.addPixmap(square_color)
-                square_item.setPos(QtCore.QPointF(square_color.size().width() * x, square_color.size().height() * y))
+                square_item.setPos(
+                    QtCore.QPointF(
+                        square_color.size().width() * x,
+                        square_color.size().height() * y,
+                    )
+                )
 
                 # If tile is empty, continue
                 if board[y, x] in ("", "XX"):
                     continue
 
-                player_piece, player_color = board[y, x]
+                piece: Piece = board[y, x]
+                
+                self.chess_scene.addItem(piece)
+                piece.setPos(
+                    QtCore.QPointF(
+                        square_color.size().width() * x,
+                        square_color.size().height() * y,
+                    )
+                )
 
-                img = self.chess_scene.addPixmap(PieceManager.get_piece_img(player_color, player_piece))
-                img.setPos(QtCore.QPointF(square_color.size().width() * x, square_color.size().height() * y))
+                piece.setZValue(1000)
         self.update_chessboard()
 
     def setup_players(self):
@@ -165,7 +234,10 @@ class ChessArena(Ui_MainWindow, QMainWindow):
 
         # TODO: Find a better solution
         def resize():
-            self.botsScrollArea.setMaximumHeight(layout.maximumSize().height() + 2)
+            self.botsScrollArea.setMaximumHeight(
+                layout.maximumSize().height() + 2
+            )
+
         QTimer.singleShot(1, resize)
 
     def start(self):
@@ -186,7 +258,7 @@ class ChessArena(Ui_MainWindow, QMainWindow):
             self,
             "Save board as ...",
             self.BOARDS_DIR,
-            "Board File (*.brd *.fen)"
+            "Board File (*.brd *.fen)",
         )
         if path == "":
             return
@@ -226,7 +298,9 @@ class ChessArena(Ui_MainWindow, QMainWindow):
         """
         tab = self.movesList
         tab.insertRow(tab.rowCount())
-        tab.setItem(tab.rowCount() - 1, 0, QTableWidgetItem(str(tab.rowCount())))
+        tab.setItem(
+            tab.rowCount() - 1, 0, QTableWidgetItem(str(tab.rowCount()))
+        )
         tab.setItem(tab.rowCount() - 1, 1, QTableWidgetItem(move))
         tab.setItem(tab.rowCount() - 1, 2, QTableWidgetItem(player))
         tab.resizeColumnsToContents()

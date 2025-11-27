@@ -68,36 +68,42 @@ def move_is_valid(player_order, move, board):
     #   Check boundary condition
     if start[0] < 0 or start[0] >= board.shape[0] or \
        start[1] < 0 or start[1] >= board.shape[1]:
+       print("boundary 1")
        return False
 
     #   Check boundary condition
     if end[0] < 0 or end[0] >= board.shape[0] or \
        end[1] < 0 or end[1] >= board.shape[1]:
+       print("boundary 2")
        return False
 
     #   Check piece moved
     if board[start[0], start[1]] == '' or board[start[0], start[1]] == 'X':
+        print("piece moved")
         return False
 
-    piece, colour = board[start[0], start[1]]
-
+    piece = board[start[0], start[1]]
+    
     #   Moving right color
-    if colour != player_color:
+    if piece.color != player_color:
+        print("right color")
         return False
 
     #   check piece specific rules
-    if piece == 'p':
+    if piece.type == 'p':
         if end[0] != start[0] + 1: #    Pawn always move forward
+            print("forward")
             return False
 
         if end[1] == start[1]:
+            print("free : ", is_free(end))
             return is_free(end)
         else:
             #   Capture ?
             print(team_at(end), "!=", player_team, "==", team_at(end) != player_team)
             print(abs(end[1] - start[1]) == 1 and (not is_free(end)) and int(team_at(end)) != player_team)
             return abs(end[1] - start[1]) == 1 and (not is_free(end)) and int(team_at(end)) != player_team
-    elif piece == 'n':
+    elif piece.type == 'n':
         dx = abs(end[0] - start[0])
         dy = abs(end[1] - start[1])
 
@@ -106,16 +112,16 @@ def move_is_valid(player_order, move, board):
         else: # invalid knight move
             return False
 
-    elif piece == 'b':
+    elif piece.type == 'b':
         return can_move_diagonally()
 
-    elif piece == 'r':
+    elif piece.type == 'r':
         return can_move_along_axis()
 
-    elif piece == "q":
+    elif piece.type == "q":
         return can_move_diagonally() != can_move_along_axis()
 
-    elif piece == "k":
+    elif piece.type == "k":
         dx = abs(end[0] - start[0])
         dy = abs(end[1] - start[1])
 
